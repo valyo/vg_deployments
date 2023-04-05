@@ -1,2 +1,2 @@
-# vg_deployments
+# VG deployments
 Docker compose deployments
