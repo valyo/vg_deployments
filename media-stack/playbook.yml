@@ -1,0 +1,28 @@
+- name: Deploy stack-1
+  hosts: mbp
+  # gather_facts: false
+
+  tasks:
+    - name: copy docker compose files
+      copy:
+        src: "{{ item }}"
+        dest: /home/val/media-stack/{{ item }}
+      loop:
+      - docker-compose.yml
+      - .env
+      tags:
+        - copy
+
+    - name: deploy the stack
+      ansible.builtin.shell: "docker compose --profile stack-1 up -d"
+      args:
+        chdir: /home/val/media-stack/
+      tags:
+        - up
+
+    - name: tear down the stack
+      ansible.builtin.shell: "docker compose --profile stack-1 down"
+      args:
+        chdir: /home/val/media-stack/
+      tags:
+        - down
