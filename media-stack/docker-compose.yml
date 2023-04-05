@@ -100,7 +100,7 @@ services:
       - TZ=UTC
     volumes:
       - sonarr-config:/config
-      - /burkpool/samba/test_media:/data
+      - ${SONARR_DATA}:/data
     ports:
       - 8989:8989
     restart: unless-stopped
@@ -149,7 +149,7 @@ services:
       - TZ=UTC
     volumes:
       - jellyfin-config:/config
-      - /burkpool/samba/test_media:/data
+      - ${JELLYFIN_DATA}:/data
   # devices:
    #  - /dev/videoN:/dev/videoN # Mount GPU device 
     ports:
@@ -163,9 +163,9 @@ volumes:
   sonarr-config:
   jackett-config:
   jackett-blackhole:
-  prowlarr-config:
+  #prowlarr-config:
   jellyfin-config:
-  qbittorrent-config:
+  #qbittorrent-config:
   tx-config:
   tx-watch:
 
