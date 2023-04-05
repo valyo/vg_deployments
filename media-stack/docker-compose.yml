@@ -60,8 +60,8 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Stockholm
-      - USER=admin
-      - PASS=89c9cc
+      - USER=${TX_USER}
+      - PASS=${TX_PASSWORD}
 
     ## Comment below ports if VPN is enabled.
     ports:
@@ -70,7 +70,7 @@ services:
       - 51413:51413/udp
     volumes:
       - tx-config:/config
-      - /burkpool/samba/test_media/torrents:/downloads
+      - ${TX_DOWNLOADS}:/downloads
       - tx-watch:/watch
     restart: "unless-stopped"
 
