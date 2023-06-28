@@ -1,0 +1,25 @@
+---
+# tasks file for media_stack
+- name: copy docker compose files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ workdir }}{{ item }}"
+  loop:
+  - docker-compose.yml
+  - .env
+  tags:
+    - copy
+
+- name: deploy the stack
+  ansible.builtin.shell: "docker compose --profile stack-1 up -d"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - up
+
+- name: tear down the stack
+  ansible.builtin.shell: "docker compose --profile stack-1 down"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - down

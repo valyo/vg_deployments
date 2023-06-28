@@ -1,0 +1,4 @@
+- hosts: mbp
+  become: true
+  roles:
+    - media_stack

@@ -1,0 +1,5 @@
+- hosts: mbp
+  gather_facts: "True"
+  become: true
+  roles:
+    - home_server

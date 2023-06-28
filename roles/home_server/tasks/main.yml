@@ -1,0 +1,110 @@
+---
+# tasks file for burkeng setup
+- name: Install packages
+  apt:
+    pkg:
+    - htop
+    - vim
+    - lm-sensors
+    - locales
+    - rsync
+    - tmux
+    - tcpdump
+    - dnsutils
+    - git-core
+    - bash-completion
+    - iputils-ping
+    - traceroute
+    - net-tools
+  tags:
+  - burken
+    mbp
+- name: Ensure the locale exists
+  locale_gen:
+    name: en_US.UTF-8
+    state: present
+- name: set as default locale
+  command: localectl set-locale LANG=en_US.UTF-8
+- name: Add Docker GPG apt Key
+  get_url:
+    url: https://download.docker.com/linux/{{ansible_distribution|lower}}/gpg
+    dest: /etc/apt/trusted.gpg.d/docker.asc
+- name: Add Docker Repository
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+    state: present
+    update_cache: yes
+- name: Update apt and install docker-ce
+  apt:
+    name: docker-ce
+    state: latest
+    update_cache: true
+- name: Add current user to docker group
+  ansible.builtin.user:
+    name: "{{ local_user }}"
+    groups: docker
+    append: yes
+- name: Install zfsutils-linux with ensuring conflicted packages (e.g. zfs-fuse) will not be removed.
+  apt:
+    name: zfsutils-linux
+    state: latest
+    fail_on_autoremove: yes
+- name: Set timezone
+  timezone:
+    name: Europe/Stockholm
+- name: set NTP server
+  lineinfile:
+    path: /etc/systemd/timesyncd.conf
+    line: "NTP=0.se.pool.ntp.org"
+    state: present
+- name: restart systemd-timesyncd
+  systemd:
+    name: systemd-timesyncd
+    state: restarted
+- name: copy ssh pub key
+  copy:
+    src: id_ed25519.pub
+    dest: /home/{{ local_user }}/.ssh/id_ed25519.pub
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0644"
+  tags: ssh-keys
+- name: copy ssh private keys
+  copy:
+    src: id_ed25519
+    dest: /home/{{ local_user }}/.ssh/id_ed25519
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0600"
+  tags: ssh-keys
+- name: copy .bashrc
+  copy:
+    src: bashrc
+    dest: /home/{{ local_user }}/.bashrc
+- name: copy tmux conf files
+  copy:
+    src: '{{ item }}'
+    dest: /home/{{ local_user }}/.tmux.conf
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: preserve
+  loop:
+    - tmux.conf
+- name: clone tmux tpm plugin repo
+  ansible.builtin.git:
+    repo: https://github.com/tmux-plugins/tpm.git
+    dest: /home/{{ local_user }}/.tmux/plugins/tpm
+- name: clone tmux tmux-continuum plugin repo
+  ansible.builtin.git:
+    repo: https://github.com/tmux-plugins/tmux-continuum.git
+    dest: /home/{{ local_user }}/.tmux/plugins/tmux-continuum
+- name: clone tmux tmux-resurrect plugin repo
+  ansible.builtin.git:
+    repo: https://github.com/tmux-plugins/tmux-resurrect.git
+    dest: /home/{{ local_user }}/.tmux/plugins/tmux-resurrect
+    force: true
+# TODO
+#  - name: import zpools
+  # zpool import ****pool -f
+  # if possible, check if zsf and zpool are fine
+#  - name: Configure Docker with the zfs storage driver
