@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  pihole:
+    container_name: pihole
+    image: ghcr.io/valyo/docker-pihole-unbound:2024.07.0
+    hostname: ${HOSTNAME}
+    domainname: ${PIHOLE_DOMAIN}
+    dns: 127.0.0.1
+    ports:
+      - "443:443/tcp"
+      - "${FTLCONF_LOCAL_IPV4}:53:53/tcp"
+      - "${FTLCONF_LOCAL_IPV4}:53:53/udp"
+      - "80:80/tcp"
+    environment:
+      FTLCONF_LOCAL_IPV4: ${FTLCONF_LOCAL_IPV4}
+      TZ: ${TZ}
+      WEBPASSWORD: ${WEBPASSWORD}
+      REV_SERVER: ${REV_SERVER}
+      REV_SERVER_TARGET: ${REV_SERVER_TARGET}
+      REV_SERVER_DOMAIN: ${REV_SERVER_DOMAIN}
+      REV_SERVER_CIDR: ${REV_SERVER_CIDR}
+      DNS1: 127.0.0.1#5335 # Hardcoded to our Unbound server
+      DNS2: 127.0.0.1#5335 # Hardcoded to our Unbound server
+      DNSSEC: "true" # Enable DNSSEC
+      VIRTUAL_HOST: ${VIRTUAL_HOST}
+    volumes:
+      - etc_pihole-unbound:/etc/pihole:rw
+      - etc_pihole_dnsmasq-unbound:/etc/dnsmasq.d:rw
+    networks:
+      home:
+        ipv4_address: ${FTLCONF_LOCAL_IPV4}
+    restart: unless-stopped
+volumes:
+  etc_pihole-unbound:
+  etc_pihole_dnsmasq-unbound:
+
+networks:
+  home:
+    driver: macvlan
+    driver_opts:
+      parent: ${DOCKER_HOST_NIC}
+    ipam:
+      config:
+        - subnet: ${DOCKER_NETWORK_SUBNET}
+          gateway: ${DOCKER_NETWORK_GATEWAY}

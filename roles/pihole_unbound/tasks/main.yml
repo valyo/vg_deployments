@@ -1,27 +1,73 @@
 ---
-# tasks file for media_stack
+# tasks file for pihole_unbound
 - name: copy docker compose files
   copy:
     src: "{{ item }}"
-    dest: "{{ workdir }}{{ item }}"
+    dest: "{{ workdir }}"
   loop:
-  - docker-compose.yml
+  - docker-compose.yaml
+  # - docker-compose.bridge_network.yaml
   - .env
   tags:
     - copy
 
 - name: deploy the stack
-  ansible.builtin.shell: "docker compose --profile stack-1 up -d"
+  ansible.builtin.shell: "docker compose up -d"
   args:
     chdir: "{{ workdir }}"
   tags:
     - up
 
 - name: tear down the stack
-  ansible.builtin.shell: "docker compose --profile stack-1 down"
+  ansible.builtin.shell: "docker compose down"
   args:
     chdir: "{{ workdir }}"
   tags:
     - down
----
-# tasks file for pihole_unbound
+
+- name: pull image
+  ansible.builtin.shell: "docker compose pull"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - pull
+
+- name: restart
+  ansible.builtin.shell: "docker compose restart"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - restart
+
+- name: Retrieve host vars
+  debug:
+    var=ansible_facts['default_ipv4']['interface']
+  tags:
+   - test
+
+- name: Get the macvlan parent interface
+  set_fact:
+    macvlan_parent: "{{ ansible_facts['default_ipv4']['interface'] }}"
+    # macvlan_parent: "{{ ansible_facts['ansible_interfaces'] }}"
+  # when: bla is not defined
+  tags:
+   - macvlan
+
+- name: Show the selected macvlan parent interface
+  debug:
+    msg: "Selected macvlan_parent: {{ macvlan_parent }}"
+  tags:
+   - macvlan
+
+- name: Create macvlan connection with NetworkManager
+  shell: |
+    nmcli connection add type macvlan con-name {{ macvlan_name }} ifname {{ macvlan_name }} dev {{ macvlan_parent }} mode bridge ipv4.addresses {{ macvlan_ip }} ipv4.method manual ipv4.routes "{{ macvlan_route }}"
+  args:
+    creates: /etc/NetworkManager/system-connections/{{ macvlan_name }}.nmconnection
+  tags:
+   - macvlan
+
+- name: Activate the macvlan connection
+  shell: nmcli connection up {{ macvlan_name }}
+  tags:
+   - macvlan
