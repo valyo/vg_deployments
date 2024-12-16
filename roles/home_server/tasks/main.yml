@@ -16,9 +16,12 @@
     - iputils-ping
     - traceroute
     - net-tools
+    - nmap
+    - unzip
+    - hfsplus
+    - hfsprogs
   tags:
-  - burken
-    mbp
+  - apt
 - name: Ensure the locale exists
   locale_gen:
     name: en_US.UTF-8
@@ -89,7 +92,7 @@
     group: "{{ local_user }}"
     mode: preserve
   loop:
-    - tmux.conf
+    - .tmux.conf
 - name: clone tmux tpm plugin repo
   ansible.builtin.git:
     repo: https://github.com/tmux-plugins/tpm.git
@@ -103,6 +106,18 @@
     repo: https://github.com/tmux-plugins/tmux-resurrect.git
     dest: /home/{{ local_user }}/.tmux/plugins/tmux-resurrect
     force: true
+- name: Add a pesh user without home directory and password
+  ansible.builtin.user:
+    name: pesh
+    shell: /bin/bash
+    create_home: yes
+    home: /home/pesh
+    password: "!"
+- name: Add public SSH key for pesh
+  ansible.builtin.authorized_key:
+    user: pesh
+    state: present
+    key: "{{ lookup('file', 'id_ed25519_pesh.pub') }}"
 # TODO
 #  - name: import zpools
   # zpool import ****pool -f
