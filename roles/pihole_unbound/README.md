@@ -33,11 +33,11 @@ Variables in .env file are (see [my image repo]((https://github.com/valyo/docker
     REV_SERVER_DOMAIN=
     REV_SERVER_TARGET=
     REV_SERVER_CIDR=
-    VIRTUAL_HOST=
+    VIRTUAL_HOST=       # domain name fo accessing the interface instead of pi.hole
     PIHOLE_DNS_=
     DNSSEC=
-    HOSTNAME=
-    PIHOLE_DOMAIN=
+    HOSTNAME=           # container hostname
+    PIHOLE_DOMAIN=      # contained domain
     DOCKER_HOST_NIC=
     DOCKER_NETWORK_SUBNET=
     DOCKER_NETWORK_GATEWAY=
