@@ -3,7 +3,7 @@ version: '3'
 services:
   pihole:
     container_name: pihole
-    image: ghcr.io/valyo/docker-pihole-unbound:2025.02.4
+    image: ghcr.io/valyo/docker-pihole-unbound:2025.03.0
     hostname: ${HOSTNAME}
     domainname: ${PIHOLE_DOMAIN}
     dns: 127.0.0.1
