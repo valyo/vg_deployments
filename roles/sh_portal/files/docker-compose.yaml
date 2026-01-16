@@ -1,0 +1,44 @@
+---
+services:
+  app:
+    image: ghcr.io/valyo/sh-portal:0.1.0
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8087}:5000"
+    volumes:
+      # Persist SQLite database
+      - ./data/instance:/app/instance
+      # Persist generated invoices
+      - ./data/invoices:/app/invoices
+      # Persist generated certificates
+      - ./data/certificates:/app/certificates
+      # Google Sheets credentials (if needed)
+      - ./data/credentials:/app/credentials:ro
+    env_file:
+      - .env
+    environment:
+      # Mail configuration - set these in .env or override here
+      - MAIL_SERVER=${MAIL_SERVER:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USE_TLS=${MAIL_USE_TLS:-True}
+      - MAIL_USE_SSL=${MAIL_USE_SSL:-False}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER}
+      # Google Sheets credentials path (inside container)
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+      - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+
+  mailcatcher:
+    image: sj26/mailcatcher:v0.10.0
+    ports:
+      - "1025:1025"  # SMTP port
+      - "1088:1080"  # Web interface
