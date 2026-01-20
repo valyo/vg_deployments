@@ -1,0 +1,66 @@
+---
+# tasks file for samba
+- name: ensure workdir exists
+  ansible.builtin.file:
+    path: "{{ workdir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - copy
+
+- name: copy docker compose files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ workdir }}"
+  loop:
+  - compose.yml
+  tags:
+    - copy
+
+- name: copy .env from template
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ workdir }}/.env"
+  tags:
+    - copy
+
+- name: copy smb.conf from template
+  ansible.builtin.template:
+    src: smb.conf.j2
+    dest: "{{ workdir }}/smb.conf"
+  tags:
+    - copy
+
+- name: deploy the stack
+  ansible.builtin.shell: "docker compose up -d"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - up
+
+- name: tear down the stack
+  ansible.builtin.shell: "docker compose down"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - down
+
+- name: pull image
+  ansible.builtin.shell: "docker compose pull"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - pull
+
+- name: recreate the stack
+  ansible.builtin.shell: "docker compose up -d --force-recreate"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - restart
+
+- name: Retrieve host vars
+  debug:
+    var=ansible_facts['default_ipv4']['interface']
+  tags:
+   - test
