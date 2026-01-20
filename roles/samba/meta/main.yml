@@ -1,0 +1,30 @@
+galaxy_info:
+  author: Valentin Georgiev 
+  description: Deploys Samba file server in Docker container with user authentication
+  company: 
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.9"
+
+  # Supported platforms
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - buster
+        - bullseye
+        - bookworm
+
+  galaxy_tags:
+    - samba
+    - fileserver
+    - docker
+    - smb
+    - cifs
+    - nas
+    - storage
+    - fileshare
+
+dependencies: []

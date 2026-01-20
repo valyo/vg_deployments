@@ -1,0 +1,21 @@
+services:
+  samba:
+    image: dockurr/samba
+    container_name: samba
+    hostname: ${SAMBA_NAME}
+    environment:
+      NAME: ${SAMBA_NAME}
+      USER: ${SAMBA_USER}
+      PASS: ${SAMBA_PASSWORD}
+      UID: ${SAMBA_UID}
+      GID: ${SAMBA_GID}
+      GUEST: "yes"
+      WIDE: "yes"
+      DEBUG_LEVEL: 2
+    ports:
+      - 445:445
+      - 139:139
+    volumes:
+      - ${SAMBA_STORAGE}:/storage
+      - ./smb.conf:/etc/samba/smb.conf
+    restart: always
