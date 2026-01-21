@@ -1,7 +1,7 @@
 Samba File Server
 =========
 
-This role deploys a Samba file server in a Docker container using the [dockurr/samba](https://hub.docker.com/r/dockurr/samba) image. It provides SMB/CIFS file sharing with user authentication and guest access support.
+This role deploys a Samba file server in a Docker container using the [dockurr/samba](https://github.com/dockur/samba) image. It provides SMB/CIFS file sharing with user authentication and guest access support. See the source code repo for details about configuration options.
 
 Requirements
 ------------
