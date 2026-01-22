@@ -1,4 +1,4 @@
-- hosts: mbp
+- hosts: "{{ host }}"
   gather_facts: "True"
   become: true
   roles:

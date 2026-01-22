@@ -1,4 +1,3 @@
 - hosts: "{{ host }}"
-  become: true
   roles:
     - pihole_unbound

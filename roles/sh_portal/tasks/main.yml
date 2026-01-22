@@ -1,0 +1,92 @@
+---
+# tasks file for pihole_unbound
+- name: ensure workdir exists
+  ansible.builtin.file:
+    path: "{{ workdir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - copy
+
+- name: ensure data directory exists
+  ansible.builtin.file:
+    path: "{{ workdir }}/data"
+    state: directory
+    mode: '0755'
+  tags:
+    - copy
+
+- name: ensure credentials directory exists
+  ansible.builtin.file:
+    path: "{{ workdir }}/data/credentials"
+    state: directory
+    mode: '0755'
+  tags:
+    - copy
+
+- name: ensure instance directory exists
+  ansible.builtin.file:
+    path: "{{ workdir }}/data/instance"
+    state: directory
+    mode: '0755'
+  tags:
+    - copy
+
+- name: copy docker compose files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ workdir }}"
+  loop:
+  - docker-compose.yaml
+  - .env
+  - service-account.json
+  tags:
+    - copy
+
+- name: copy Google sheet credentials file
+  copy:
+    src: service-account.json
+    dest: "{{ workdir }}/data/credentials/service-account.json"
+  tags: 
+    - copy
+
+- name: copy instance database file
+  copy:
+    src: sh_portal.db
+    dest: "{{ workdir }}/data/instance/sh_portal.db"
+  tags:
+    - copy
+
+- name: deploy the stack
+  ansible.builtin.shell: "docker compose up -d"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - up
+
+- name: tear down the stack
+  ansible.builtin.shell: "docker compose down"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - down
+
+- name: pull image
+  ansible.builtin.shell: "docker compose pull"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - pull
+
+- name: recreate the stack
+  ansible.builtin.shell: "docker compose up -d --force-recreate"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - restart
+
+- name: Retrieve host vars
+  debug:
+    var=ansible_facts['default_ipv4']['interface']
+  tags:
+   - test

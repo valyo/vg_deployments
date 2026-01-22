@@ -5,15 +5,10 @@ services:
     hostname: ${HOSTNAME}
     domainname: ${PIHOLE_DOMAIN}
     dns: 127.0.0.1
-    ports:
-      - "443:443/tcp"
-      - "${FTLCONF_LOCAL_IPV4}:53:53/tcp"
-      - "${FTLCONF_LOCAL_IPV4}:53:53/udp"
-      - "80:80/tcp"
     environment:
       FTLCONF_LOCAL_IPV4: ${FTLCONF_LOCAL_IPV4}
       TZ: ${TZ}
-      WEBPASSWORD: ${WEBPASSWORD}
+      FTLCONF_webserver_api_password: ${WEBPASSWORD}
       REV_SERVER: ${REV_SERVER}
       REV_SERVER_TARGET: ${REV_SERVER_TARGET}
       REV_SERVER_DOMAIN: ${REV_SERVER_DOMAIN}
@@ -22,6 +17,9 @@ services:
       DNS2: ${PIHOLE_DNS_} # Our Unbound server
       DNSSEC: "true" # Enable DNSSEC
       VIRTUAL_HOST: ${VIRTUAL_HOST}
+      FTLCONF_misc_dnsmasq_lines: no-0x20-encode
+    cap_add:
+      - SYS_TIME
     volumes:
       - etc_pihole-unbound:/etc/pihole:rw
       - etc_pihole_dnsmasq-unbound:/etc/dnsmasq.d:rw
