@@ -1,8 +1,7 @@
----
 services:
   pihole:
     container_name: pihole
-    image: ghcr.io/valyo/docker-pihole-unbound:2025.11.0
+    image: ghcr.io/valyo/docker-pihole-unbound:${IMAGE_VERSION}
     hostname: ${HOSTNAME}
     domainname: ${PIHOLE_DOMAIN}
     dns: 127.0.0.1
@@ -14,6 +13,8 @@ services:
       REV_SERVER_TARGET: ${REV_SERVER_TARGET}
       REV_SERVER_DOMAIN: ${REV_SERVER_DOMAIN}
       REV_SERVER_CIDR: ${REV_SERVER_CIDR}
+      DNS1: ${PIHOLE_DNS_} # Our Unbound server
+      DNS2: ${PIHOLE_DNS_} # Our Unbound server
       DNSSEC: "true" # Enable DNSSEC
       VIRTUAL_HOST: ${VIRTUAL_HOST}
       FTLCONF_misc_dnsmasq_lines: no-0x20-encode
