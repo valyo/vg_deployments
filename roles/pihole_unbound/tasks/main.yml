@@ -44,8 +44,8 @@
   tags:
     - pull
 
-- name: restart
-  ansible.builtin.shell: "docker compose restart"
+- name: recreate the stack
+  ansible.builtin.shell: "docker compose up -d --force-recreate"
   args:
     chdir: "{{ workdir }}"
   tags:
