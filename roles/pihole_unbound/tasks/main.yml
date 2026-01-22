@@ -2,12 +2,16 @@
 # tasks file for pihole_unbound
 - name: copy docker compose files
   copy:
-    src: "{{ item }}"
+    src: compose.yaml
     dest: "{{ workdir }}"
-  loop:
-  - docker-compose.yaml
-  # - docker-compose.bridge_network.yaml
-  - .env
+  tags:
+    - copy
+
+- name: generate .env file from template
+  template:
+    src: env.j2
+    dest: "{{ workdir }}/.env"
+    mode: '0600'
   tags:
     - copy
 
