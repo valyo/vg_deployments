@@ -16,6 +16,24 @@
   tags:
     - casaos
 
+- name: Remove samba from CasaOS install dependencies
+  replace:
+    path: /tmp/casaos_install.sh
+    regexp: "'samba' "
+    replace: ""
+  when: not casaos_installed.stat.exists
+  tags:
+    - casaos
+
+- name: Remove smbd from CasaOS install dependencies
+  replace:
+    path: /tmp/casaos_install.sh
+    regexp: "'smbd' "
+    replace: ""
+  when: not casaos_installed.stat.exists
+  tags:
+    - casaos
+
 - name: Install CasaOS
   shell: /tmp/casaos_install.sh
   args:
