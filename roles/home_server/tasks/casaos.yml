@@ -1,0 +1,40 @@
+---
+# tasks file for installing CasaOS
+- name: Check if CasaOS is already installed
+  stat:
+    path: /usr/bin/casaos
+  register: casaos_installed
+  tags:
+    - casaos
+
+- name: Download CasaOS install script
+  get_url:
+    url: https://get.casaos.io
+    dest: /tmp/casaos_install.sh
+    mode: '0755'
+  when: not casaos_installed.stat.exists
+  tags:
+    - casaos
+
+- name: Install CasaOS
+  shell: /tmp/casaos_install.sh
+  args:
+    creates: /usr/bin/casaos
+  when: not casaos_installed.stat.exists
+  register: casaos_install_output
+  tags:
+    - casaos
+
+- name: Display CasaOS installation output
+  debug:
+    msg: "{{ casaos_install_output.stdout_lines }}"
+  when: casaos_install_output.stdout_lines is defined
+  tags:
+    - casaos
+
+- name: Remove install script
+  file:
+    path: /tmp/casaos_install.sh
+    state: absent
+  tags:
+    - casaos

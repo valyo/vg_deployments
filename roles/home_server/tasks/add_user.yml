@@ -2,7 +2,7 @@
 # tasks file adding a user
 - name: Add a user without home directory and password
   ansible.builtin.user:
-    name: {{ new_user }}
+    name: "{{ new_user }}"
     shell: /bin/bash
     create_home: yes
     home: /home/{{ new_user }}
@@ -10,7 +10,7 @@
   tags: user
 - name: Add public SSH key for the user
   ansible.builtin.authorized_key:
-    user: {{ new_user }}
+    user: "{{ new_user }}"
     state: present
     key: "{{ lookup('file', 'id_ed25519_user.pub') }}"
   tags: user

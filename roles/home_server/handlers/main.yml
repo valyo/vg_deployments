@@ -1,2 +1,6 @@
 ---
 # handlers file for home_server
+- name: restart avahi-daemon
+  systemd:
+    name: avahi-daemon
+    state: restarted

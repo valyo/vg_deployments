@@ -1,0 +1,53 @@
+---
+- name: Get list of installed snaps
+  shell: "snap list | awk 'NR>1 {print $1}'"
+  register: installed_snaps
+  changed_when: false
+  failed_when: false
+
+- name: Remove all installed snaps (including lxd, core, snapd)
+  shell: "snap remove --purge {{ item }}"
+  loop: "{{ installed_snaps.stdout_lines }}"
+  when: installed_snaps.stdout_lines | length > 0
+
+- name: Stop and disable snapd services
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - snapd.service
+    - snapd.socket
+    - snapd.seeded.service
+  ignore_errors: true
+
+- name: Purge snapd package
+  apt:
+    name: snapd
+    state: absent
+    purge: true
+
+- name: Remove snap directories
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /snap
+    - /var/snap
+    - /var/lib/snapd
+    - /var/cache/snapd
+    - ~/snap
+
+- name: Create APT preference to block snapd
+  copy:
+    dest: /etc/apt/preferences.d/nosnap.pref
+    content: |
+      Package: snapd
+      Pin: release a=*
+      Pin-Priority: -10
+    mode: '0644'
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
