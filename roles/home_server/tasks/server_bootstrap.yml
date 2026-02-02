@@ -20,8 +20,15 @@
     - unzip
     - hfsplus
     - hfsprogs
+    - avahi-daemon
   tags:
   - apt
+- name: Configure avahi samba service
+  copy:
+    src: samba.service
+    dest: /etc/avahi/services/samba.service
+    mode: "0644"
+  notify: restart avahi-daemon
 - name: Ensure the locale exists
   locale_gen:
     name: en_US.UTF-8

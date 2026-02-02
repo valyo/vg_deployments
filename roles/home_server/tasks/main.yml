@@ -1,6 +1,12 @@
 ---
-- include_tasks: server_bootstrap.yaml
-- include_tasks: add_user.yaml
+- import_tasks: server_bootstrap.yml
+  tags:
+    - bootstrap
+- include_tasks: remove_snap.yml
+- include_tasks: add_user.yml
+- include_tasks: casaos.yml
+  tags:
+    - casaos
 
 # TODO
 #  - name: import zpools
