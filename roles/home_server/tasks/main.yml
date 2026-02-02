@@ -1,5 +1,5 @@
 ---
-- include_tasks: server_bootstrap.yml
+- import_tasks: server_bootstrap.yml
   tags:
     - bootstrap
 - include_tasks: remove_snap.yml
