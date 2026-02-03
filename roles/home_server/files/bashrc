@@ -18,11 +18,15 @@ shopt -s histappend
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 HISTSIZE=100000
 HISTFILESIZE=200000
-HISTCONTROL=erasedups
-shopt -s histappend
+#HISTCONTROL=erasedups
 HISTTIMEFORMAT='%F %T '
+shopt -s histappend
 shopt -s cmdhist
-PROMPT_COMMAND='history -a'
+
+# 5. The Sync Engine:
+# 'history -a' writes current session to disk
+# 'history -n' reads new lines from disk (syncs multiple open terminals)
+PROMPT_COMMAND="history -a; history -n; $PROMPT_COMMAND"
 
 
 # check the window size after each command and, if necessary,
@@ -94,7 +98,7 @@ fi
 #export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
 # some more ls aliases
-alias ll='ls -alF'
+alias ll='ls -alFh'
 alias la='ls -A'
 alias l='ls -CF'
 
