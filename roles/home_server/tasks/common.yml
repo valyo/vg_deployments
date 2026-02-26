@@ -118,22 +118,38 @@
   tags:
     - common
 
-- name: copy ssh pub key
+- name: Ensure .ssh directory exists
+  file:
+    path: /home/{{ local_user }}/.ssh
+    state: directory
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0700"
+  tags: ssh-keys
+
+- name: Deploy inter-server SSH private key
   copy:
-    src: id_ed25519.pub
-    dest: /home/{{ local_user }}/.ssh/id_ed25519.pub
+    src: id_ed25519_servers
+    dest: /home/{{ local_user }}/.ssh/id_ed25519_servers
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0600"
+  tags: ssh-keys
+
+- name: Deploy inter-server SSH public key
+  copy:
+    src: id_ed25519_servers.pub
+    dest: /home/{{ local_user }}/.ssh/id_ed25519_servers.pub
     owner: "{{ local_user }}"
     group: "{{ local_user }}"
     mode: "0644"
   tags: ssh-keys
 
-- name: copy ssh private keys
-  copy:
-    src: id_ed25519
-    dest: /home/{{ local_user }}/.ssh/id_ed25519
-    owner: "{{ local_user }}"
-    group: "{{ local_user }}"
-    mode: "0600"
+- name: Authorize inter-server SSH key
+  ansible.builtin.authorized_key:
+    user: "{{ local_user }}"
+    key: "{{ lookup('file', 'id_ed25519_servers.pub') }}"
+    state: present
   tags: ssh-keys
 
 - name: Deploy SSH config for other servers

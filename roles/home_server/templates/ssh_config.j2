@@ -4,6 +4,6 @@
 Host {{ host }}
     HostName {{ hostvars[host]['ansible_host'] }}
     User {{ hostvars[host]['ansible_user'] }}
-    IdentityFile ~/.ssh/id_ed25519
+    IdentityFile ~/.ssh/id_ed25519_servers
     StrictHostKeyChecking accept-new
 {% endfor %}
