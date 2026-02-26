@@ -4,3 +4,16 @@
   systemd:
     name: avahi-daemon
     state: restarted
+
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+
+- name: reload udev rules
+  command: udevadm control --reload-rules
+
+- name: restart logind
+  systemd:
+    name: systemd-logind
+    state: restarted

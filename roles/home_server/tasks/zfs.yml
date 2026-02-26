@@ -1,0 +1,186 @@
+---
+# ZFS-specific tasks for primary storage server
+- name: Install zfsutils-linux
+  apt:
+    name: zfsutils-linux
+    state: latest
+    fail_on_autoremove: yes
+  tags:
+    - zfs
+
+# Discover already-imported pools
+- name: Check imported zpools
+  command: zpool list -H -o name
+  register: imported_zpools
+  changed_when: false
+  failed_when: false
+  tags:
+    - zfs
+
+# Discover pools available for import (fresh install / recovery)
+- name: Discover importable zpools
+  shell: zpool import 2>/dev/null | grep '^\s*pool:' | awk '{print $2}'
+  register: importable_zpools
+  changed_when: false
+  failed_when: false
+  tags:
+    - zfs
+
+# Import from explicit list if provided, otherwise import all discovered pools
+- name: Import zpools (explicit list)
+  command: zpool import {{ item }} -f
+  loop: "{{ zpools }}"
+  when:
+    - zpools | default([]) | length > 0
+    - item not in imported_zpools.stdout_lines
+  tags:
+    - zfs
+
+- name: Import zpools (auto-discovered)
+  command: zpool import {{ item }} -f
+  loop: "{{ importable_zpools.stdout_lines | default([]) }}"
+  when:
+    - zpools | default([]) | length == 0
+    - importable_zpools.stdout_lines | default([]) | length > 0
+    - item not in imported_zpools.stdout_lines
+  tags:
+    - zfs
+
+# Refresh pool list after imports
+- name: Get active zpools
+  command: zpool list -H -o name
+  register: active_zpools
+  changed_when: false
+  failed_when: false
+  tags:
+    - zfs
+
+- name: Verify zpool health
+  command: zpool status -x
+  register: zpool_status
+  changed_when: false
+  failed_when: "'errors' in zpool_status.stdout"
+  when: active_zpools.stdout_lines | length > 0
+  tags:
+    - zfs
+
+- name: Ensure /storage is owned by local user
+  file:
+    path: /storage
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+  tags:
+    - zfs
+
+- name: Ensure infra backup directory exists
+  file:
+    path: /burkpool/backups/infra
+    state: directory
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0755"
+  tags:
+    - zfs
+    - backup
+
+# Allow passwordless sudo rsync for backup pulls from remote hosts
+- name: Add sudoers rule for passwordless rsync
+  copy:
+    content: |
+      {{ local_user }} ALL=(root) NOPASSWD: /usr/bin/rsync
+    dest: /etc/sudoers.d/rsync-backup
+    mode: "0440"
+    validate: "visudo -cf %s"
+  tags:
+    - zfs
+    - backup
+
+# Configure Docker to use ZFS storage driver
+- name: Fail if Docker ZFS storage requested but no pool available
+  fail:
+    msg: >
+      docker_zfs_storage is enabled but no ZFS pool is active.
+      Ensure disks are connected and pools can be imported.
+  when:
+    - docker_zfs_storage | default(false)
+    - active_zpools.stdout_lines | length == 0
+  tags:
+    - zfs
+    - docker
+
+- name: Check for existing Docker ZFS dataset
+  command: zfs list -H -o name
+  register: existing_datasets
+  changed_when: false
+  failed_when: false
+  when:
+    - docker_zfs_storage | default(false)
+    - active_zpools.stdout_lines | length > 0
+  tags:
+    - zfs
+    - docker
+
+- name: Stop Docker before migrating to ZFS
+  systemd:
+    name: docker
+    state: stopped
+  when:
+    - docker_zfs_storage | default(false)
+    - (active_zpools.stdout_lines[0] + '/docker') not in (existing_datasets.stdout_lines | default([]))
+  failed_when: false
+  tags:
+    - zfs
+    - docker
+
+- name: Clear existing /var/lib/docker for ZFS migration
+  file:
+    path: /var/lib/docker
+    state: absent
+  when:
+    - docker_zfs_storage | default(false)
+    - (active_zpools.stdout_lines[0] + '/docker') not in (existing_datasets.stdout_lines | default([]))
+  tags:
+    - zfs
+    - docker
+
+- name: Create ZFS dataset for Docker
+  command: zfs create -o mountpoint=/var/lib/docker {{ active_zpools.stdout_lines[0] }}/docker
+  when:
+    - docker_zfs_storage | default(false)
+    - (active_zpools.stdout_lines[0] + '/docker') not in (existing_datasets.stdout_lines | default([]))
+  tags:
+    - zfs
+    - docker
+
+- name: Create Docker daemon config directory
+  file:
+    path: /etc/docker
+    state: directory
+    mode: "0755"
+  when: docker_zfs_storage | default(false)
+  tags:
+    - zfs
+    - docker
+
+- name: Configure Docker with ZFS storage driver
+  copy:
+    content: |
+      {
+        "storage-driver": "zfs"
+      }
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+  when: docker_zfs_storage | default(false)
+  notify: restart docker
+  tags:
+    - zfs
+    - docker
+
+- name: Ensure Docker is running with ZFS storage
+  systemd:
+    name: docker
+    state: started
+  when: docker_zfs_storage | default(false)
+  tags:
+    - zfs
+    - docker

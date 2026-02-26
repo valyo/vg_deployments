@@ -1,0 +1,120 @@
+---
+# Backup tasks for backup server
+# Pulls /burkpool from the primary ZFS server to local /backup_burkpool
+
+- name: Create mount points
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0755"
+  loop: "{{ disk_mounts }}"
+  tags:
+    - backup
+    - mounts
+
+- name: Get UUID for each disk
+  command: blkid -s UUID -o value {{ item.device }}
+  register: disk_uuids
+  changed_when: false
+  loop: "{{ disk_mounts }}"
+  tags:
+    - backup
+    - mounts
+
+- name: Mount disks persistently via fstab
+  mount:
+    path: "{{ item.item.path }}"
+    src: "UUID={{ item.stdout }}"
+    fstype: "{{ item.item.fstype | default('ext4') }}"
+    opts: defaults,nofail
+    state: mounted
+  loop: "{{ disk_uuids.results }}"
+  tags:
+    - backup
+    - mounts
+
+- name: Ensure mount point ownership after mount
+  file:
+    path: "{{ item.path }}"
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0755"
+  loop: "{{ disk_mounts }}"
+  tags:
+    - backup
+    - mounts
+
+- name: Deploy backup pull script
+  template:
+    src: backup_pull_script.sh.j2
+    dest: /usr/local/bin/backup_from_primary.sh
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - backup
+
+- name: Install exFAT support
+  apt:
+    pkg:
+      - exfatprogs
+  tags:
+    - backup
+    - external
+
+- name: Create external drive mount point
+  file:
+    path: "{{ external_drive_mount }}"
+    state: directory
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0755"
+  tags:
+    - backup
+    - external
+
+- name: Add external drive to fstab (nofail, noauto)
+  mount:
+    path: "{{ external_drive_mount }}"
+    src: "UUID={{ external_drive_uuid }}"
+    fstype: "{{ external_drive_fstype }}"
+    opts: "defaults,nofail,noauto,uid={{ local_user }},gid={{ local_user }}"
+    state: present
+  tags:
+    - backup
+    - external
+
+- name: Prevent devmon from auto-mounting external drive
+  copy:
+    content: |
+      ENV{ID_FS_UUID}=="{{ external_drive_uuid }}", ENV{UDISKS_IGNORE}="1"
+    dest: /etc/udev/rules.d/99-ignore-external-backup.rules
+    mode: "0644"
+  notify: reload udev rules
+  tags:
+    - backup
+    - external
+
+- name: Allow user to mount/unmount external backup drive without sudo
+  copy:
+    content: |
+      {{ local_user }} ALL=(root) NOPASSWD: /usr/bin/mount {{ external_drive_mount }}, /usr/bin/umount {{ external_drive_mount }}
+    dest: /etc/sudoers.d/external-backup-mount
+    mode: "0440"
+    validate: "visudo -cf %s"
+  tags:
+    - backup
+    - external
+
+- name: Deploy cold storage sync script
+  template:
+    src: sync_from_external.sh.j2
+    dest: /usr/local/bin/sync_from_external.sh
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - backup
+    - external

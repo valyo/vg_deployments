@@ -1,76 +1,123 @@
 ---
-# tasks file for installing a server from scratch
+# Common tasks for all servers
 - name: Install packages
   apt:
     pkg:
-    - htop
-    - vim
-    - lm-sensors
-    - locales
-    - rsync
-    - tmux
-    - tcpdump
-    - dnsutils
-    - git-core
-    - bash-completion
-    - iputils-ping
-    - traceroute
-    - net-tools
-    - nmap
-    - unzip
-    - hfsplus
-    - hfsprogs
-    - avahi-daemon
+      - htop
+      - vim
+      - lm-sensors
+      - locales
+      - rsync
+      - tmux
+      - tcpdump
+      - dnsutils
+      - git-core
+      - bash-completion
+      - iputils-ping
+      - traceroute
+      - net-tools
+      - nmap
+      - unzip
+      - smartmontools
+      - avahi-daemon
   tags:
-  - apt
+    - apt
+
+- name: Install radeontop
+  apt:
+    name: radeontop
+    state: present
+  when: server_role | default('') == 'zfs'
+  tags:
+    - apt
+
+- name: Install HFS packages
+  apt:
+    pkg:
+      - hfsplus
+      - hfsprogs
+  when: install_hfs | default(false)
+  tags:
+    - apt
+
 - name: Configure avahi samba service
   copy:
     src: samba.service
     dest: /etc/avahi/services/samba.service
     mode: "0644"
   notify: restart avahi-daemon
+
 - name: Ensure the locale exists
   locale_gen:
     name: en_US.UTF-8
     state: present
+
 - name: set as default locale
   command: localectl set-locale LANG=en_US.UTF-8
+
 - name: Add Docker GPG apt Key
   get_url:
-    url: https://download.docker.com/linux/{{ansible_distribution|lower}}/gpg
+    url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
     dest: /etc/apt/trusted.gpg.d/docker.asc
+  when: install_docker | default(true)
+
 - name: Add Docker Repository
   apt_repository:
     repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
     state: present
     update_cache: yes
+  when: install_docker | default(true)
+
 - name: Update apt and install docker-ce
   apt:
     name: docker-ce
     state: latest
     update_cache: true
+  when: install_docker | default(true)
+
 - name: Add current user to docker group
   ansible.builtin.user:
     name: "{{ local_user }}"
     groups: docker
     append: yes
-- name: Install zfsutils-linux with ensuring conflicted packages (e.g. zfs-fuse) will not be removed.
-  apt:
-    name: zfsutils-linux
-    state: latest
-    fail_on_autoremove: yes
+  when: install_docker | default(true)
+
 - name: Set timezone
   timezone:
-    name: Europe/Stockholm
+    name: "{{ server_timezone | default('Europe/Stockholm') }}"
+
 - name: set NTP server
   lineinfile:
     path: /etc/systemd/timesyncd.conf
-    line: "NTP=0.se.pool.ntp.org"
+    line: "NTP={{ ntp_server | default('0.se.pool.ntp.org') }}"
     state: present
+
 - name: restart systemd-timesyncd
   systemd:
     name: systemd-timesyncd
     state: restarted
+
+- name: Allow passwordless smartctl
+  copy:
+    content: |
+      {{ local_user }} ALL=(root) NOPASSWD: /usr/sbin/smartctl
+    dest: /etc/sudoers.d/smartctl
+    mode: "0440"
+    validate: "visudo -cf %s"
+  tags:
+    - common
+
+- name: Deploy disk status script
+  template:
+    src: disk_status.sh.j2
+    dest: /usr/local/bin/disk_status.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: server_role | default('') in ['zfs', 'backup']
+  tags:
+    - common
+
 - name: copy ssh pub key
   copy:
     src: id_ed25519.pub
@@ -79,6 +126,7 @@
     group: "{{ local_user }}"
     mode: "0644"
   tags: ssh-keys
+
 - name: copy ssh private keys
   copy:
     src: id_ed25519
@@ -87,27 +135,61 @@
     group: "{{ local_user }}"
     mode: "0600"
   tags: ssh-keys
+
+- name: Deploy SSH config for other servers
+  template:
+    src: ssh_config.j2
+    dest: /home/{{ local_user }}/.ssh/config
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0600"
+  tags: ssh-keys
+
 - name: copy .bashrc
   copy:
     src: bashrc
     dest: /home/{{ local_user }}/.bashrc
+
 - name: copy tmux conf files
   copy:
-    src: '{{ item }}'
+    src: "{{ item }}"
     dest: /home/{{ local_user }}/.tmux.conf
     owner: "{{ local_user }}"
     group: "{{ local_user }}"
     mode: preserve
   loop:
     - .tmux.conf
+
+- name: Deploy history backup script
+  template:
+    src: save_history.sh.j2
+    dest: /usr/local/bin/save_history.sh
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - common
+
+- name: Setup history backup cron job
+  cron:
+    name: "Save bash history to ZFS server"
+    minute: "0"
+    hour: "3"
+    job: "/usr/local/bin/save_history.sh"
+    user: "{{ local_user }}"
+  tags:
+    - common
+
 - name: clone tmux tpm plugin repo
   ansible.builtin.git:
     repo: https://github.com/tmux-plugins/tpm.git
     dest: /home/{{ local_user }}/.tmux/plugins/tpm
+
 - name: clone tmux tmux-continuum plugin repo
   ansible.builtin.git:
     repo: https://github.com/tmux-plugins/tmux-continuum.git
     dest: /home/{{ local_user }}/.tmux/plugins/tmux-continuum
+
 - name: clone tmux tmux-resurrect plugin repo
   ansible.builtin.git:
     repo: https://github.com/tmux-plugins/tmux-resurrect.git

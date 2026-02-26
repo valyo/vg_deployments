@@ -1,0 +1,82 @@
+---
+# Tasks for infra server (laptop)
+
+- name: Ignore lid close events
+  lineinfile:
+    path: /etc/systemd/logind.conf
+    regexp: "^#?{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+  loop:
+    - { key: HandleLidSwitch, value: ignore }
+    - { key: HandleLidSwitchExternalPower, value: ignore }
+    - { key: HandleLidSwitchDocked, value: ignore }
+  notify: restart logind
+  tags:
+    - infra
+    - laptop
+
+- name: Create deployments directory
+  file:
+    path: /deployments
+    state: directory
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0755"
+  tags:
+    - backup
+    - deployments
+
+- name: Install cron
+  apt:
+    pkg:
+      - cron
+  tags:
+    - backup
+
+- name: Deploy backup script
+  template:
+    src: backup_script.sh.j2
+    dest: /usr/local/bin/backup_to_primary.sh
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - backup
+
+- name: Setup backup cron job
+  cron:
+    name: "Backup to primary server"
+    minute: "{{ backup_cron_minute | default('0') }}"
+    hour: "{{ backup_cron_hour | default('3') }}"
+    day: "{{ backup_cron_day | default('*') }}"
+    job: "/usr/local/bin/backup_to_primary.sh >> /var/log/backup.log 2>&1"
+    user: root
+    state: "{{ 'present' if enable_backup_cron | default(true) else 'absent' }}"
+  tags:
+    - backup
+
+- name: Create backup log file
+  file:
+    path: /var/log/backup.log
+    state: touch
+    owner: root
+    group: root
+    mode: "0644"
+  changed_when: false
+  tags:
+    - backup
+
+- name: Setup log rotation for backup log
+  copy:
+    content: |
+      /var/log/backup.log {
+          weekly
+          rotate 4
+          compress
+          missingok
+          notifempty
+      }
+    dest: /etc/logrotate.d/backup
+    mode: "0644"
+  tags:
+    - backup

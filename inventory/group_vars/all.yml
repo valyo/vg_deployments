@@ -1,0 +1,16 @@
+---
+# Common variables for all servers
+# Group vars override these per server type
+
+local_user: "{{ ansible_user }}"
+
+# Feature flags
+install_docker: true
+install_casaos: true
+install_zfs: false
+add_extra_user: false
+install_hfs: false
+
+# Timezone and NTP
+server_timezone: Europe/Stockholm
+ntp_server: 0.se.pool.ntp.org

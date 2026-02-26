@@ -1,0 +1,9 @@
+# Managed by Ansible - do not edit manually
+{% for host in groups['home_servers'] if host != inventory_hostname %}
+
+Host {{ host }}
+    HostName {{ hostvars[host]['ansible_host'] }}
+    User {{ hostvars[host]['ansible_user'] }}
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+{% endfor %}

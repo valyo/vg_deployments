@@ -1,0 +1,21 @@
+---
+# Configuration for infra server (backs up to primary)
+
+server_role: infra
+
+# Backup configuration - push data TO primary server's ZFS storage
+backup_target_dir: /burkpool/backups/infra
+
+# Local paths to backup (Docker persistent data, etc.)
+backup_paths: []
+  # - /opt/docker/appdata
+  # - /home/{{ local_user }}/docker
+
+# Backup schedule (cron format)
+backup_cron_minute: "0"
+backup_cron_hour: "3"
+backup_cron_day: "*"
+enable_backup_cron: true
+
+# Rsync options
+backup_rsync_opts: "-avz --delete --progress"
