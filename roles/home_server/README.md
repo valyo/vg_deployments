@@ -6,7 +6,13 @@ Ansible role for bootstrapping and configuring home servers. Supports three serv
 
 ### zfs_server (primary)
 
-Primary storage server with ZFS pools. Runs Docker (with ZFS storage driver), CasaOS, and hosts the main data in `/burkpool`. Also provides a passwordless `sudo rsync` rule so the backup server can pull data remotely.
+Primary storage server with ZFS pools. Runs Docker (with ZFS storage driver), CasaOS, and hosts the main data in `/burkpool`. Pools are auto-discovered and imported on fresh installs or recovery — no need to hardcode pool names. A ZFS dataset (`<pool>/docker`) is automatically created for Docker storage. The playbook will fail explicitly if `docker_zfs_storage` is enabled but no ZFS pool can be found.
+
+Also provides:
+- Passwordless `sudo rsync` so the backup server can pull data remotely
+- `/burkpool/backups/infra` directory for receiving infra server backups
+- `/storage` ownership set to `local_user`
+- `radeontop` for GPU monitoring
 
 ### infra_server (laptop)
 
@@ -21,20 +27,23 @@ Offsite/secondary backup server. Pulls `/burkpool` from the ZFS server via rsync
 - Common packages: htop, vim, lm-sensors, rsync, tmux, tcpdump, dnsutils, git-core, nmap, smartmontools, etc.
 - Passwordless `sudo smartctl` for disk monitoring
 - Locale (en_US.UTF-8), timezone, NTP
-- SSH keys, bashrc, tmux config and plugins
+- SSH keys, `~/.ssh/config` (auto-generated entries for all other servers), bashrc (with `ssh-agent` auto-start), tmux config and plugins
 - Avahi/Samba service discovery
 - CasaOS
 - Snapd removal
+- History backup cron (daily at 03:00, saves `.bash_history` to `/burkpool/history_files/<hostname>` on the ZFS server)
 
 ## Conditional features
 
 | Feature | Variable | Default | Servers |
 |---|---|---|---|
 | Docker | `install_docker` | `true` | zfs, infra |
+| Docker ZFS storage | `docker_zfs_storage` | `false` | zfs |
 | CasaOS | `install_casaos` | `true` | all |
 | ZFS | `install_zfs` | `false` | zfs |
 | HFS+ support | `install_hfs` | `false` | zfs, backup |
 | Extra user | `add_extra_user` | `false` | zfs |
+| radeontop | `server_role` | — | zfs |
 | Disk status script | `server_role` | — | zfs, backup |
 | Lid close ignore | `server_role` | — | infra |
 
@@ -51,6 +60,13 @@ Offsite/secondary backup server. Pulls `/burkpool` from the ZFS server via rsync
 | `install_hfs` | `false` | Install HFS+ filesystem support |
 | `server_timezone` | `Europe/Stockholm` | System timezone |
 | `ntp_server` | `0.se.pool.ntp.org` | NTP server |
+
+### ZFS server specific (`inventory/group_vars/zfs_server.yml`)
+
+| Variable | Description |
+|---|---|
+| `zpools` | Explicit pool names to import (empty = auto-discover) |
+| `docker_zfs_storage` | Use ZFS as Docker storage driver |
 
 ### Sensitive variables (vault-encrypted)
 
@@ -144,6 +160,10 @@ Available tags: `common`, `bootstrap`, `apt`, `ssh-keys`, `zfs`, `backup`, `moun
 disk_status.sh
 ```
 
+### All servers
+
+**`/usr/local/bin/save_history.sh`** — Saves `.bash_history` to `/burkpool/history_files/<hostname>` on the ZFS server. Runs daily at 03:00 via cron. On the ZFS server it copies locally; on other servers it uses `scp`.
+
 ### Backup server
 
 **`/usr/local/bin/backup_from_primary.sh`** — Pulls the entire `/burkpool` from the ZFS server into `/backup_burkpool` using rsync over SSH. Runs as root (uses `sudo rsync` on the remote ZFS server to read all files with preserved ownership).
@@ -153,7 +173,7 @@ sudo /usr/local/bin/backup_from_primary.sh           # full sync
 sudo /usr/local/bin/backup_from_primary.sh --dry-run  # preview only
 ```
 
-**`/usr/local/bin/sync_from_external.sh`** — Mounts the external exFAT drive, syncs its contents into `/cold_storage/archive_backup/`, then unmounts. Runs as your regular user (uses sudo only for mount/umount).
+**`/usr/local/bin/sync_from_external.sh`** — Mounts the external exFAT drive, syncs `archive_primary_copy/` into `/cold_storage/archive_backup/`, then unmounts. Runs as your regular user (uses sudo only for mount/umount). Uses `--modify-window=2` to handle exFAT timestamp precision.
 
 ```bash
 /usr/local/bin/sync_from_external.sh           # full sync
@@ -163,6 +183,21 @@ sudo /usr/local/bin/backup_from_primary.sh --dry-run  # preview only
 ### Infra server
 
 **`/usr/local/bin/backup_to_primary.sh`** — Pushes local paths (defined in `backup_paths`) to the ZFS server. Runs automatically via cron (default: daily at 03:00) when `enable_backup_cron: true`.
+
+## ZFS pool management
+
+Pools are handled automatically:
+
+1. Checks for already-imported pools (`zpool list`)
+2. Discovers pools available for import (`zpool import`) — covers fresh installs and recovery
+3. Imports from `zpools` list if provided, otherwise imports all discovered pools
+4. Verifies pool health after import
+
+If `docker_zfs_storage: true`, the playbook:
+- Fails explicitly if no pool is available
+- Creates a `<pool>/docker` dataset at `/var/lib/docker` if it doesn't exist
+- Writes `/etc/docker/daemon.json` with the ZFS storage driver
+- Ensures Docker is running
 
 ## File structure
 
@@ -181,18 +216,20 @@ roles/home_server/
 │   ├── id_ed25519             # Vault-encrypted SSH private key
 │   ├── id_ed25519.pub         # Vault-encrypted SSH public key
 │   ├── id_ed25519_user.pub    # Vault-encrypted extra user public key
-│   ├── bashrc                 # Shell config
+│   ├── bashrc                 # Shell config (includes ssh-agent auto-start)
 │   ├── .tmux.conf             # Tmux config
 │   └── samba.service          # Avahi service file
 ├── templates/
 │   ├── backup_pull_script.sh.j2    # Backup server: pull from ZFS
 │   ├── backup_script.sh.j2        # Infra server: push to ZFS
 │   ├── sync_from_external.sh.j2   # Backup server: sync external drive
-│   └── disk_status.sh.j2          # ZFS/backup: disk health overview
+│   ├── disk_status.sh.j2          # ZFS/backup: disk health overview
+│   ├── save_history.sh.j2         # All servers: bash history backup
+│   └── ssh_config.j2              # All servers: SSH config for inter-server access
 ├── tasks/
 │   ├── main.yml               # Entry point, conditional includes
 │   ├── common.yml             # Packages, Docker, SSH, locale, timezone, smartctl
-│   ├── zfs.yml                # ZFS install, pool import, Docker ZFS driver
+│   ├── zfs.yml                # ZFS install, pool auto-discovery/import, Docker ZFS driver
 │   ├── infra.yml              # Infra: lid close ignore, backup push setup
 │   ├── backup_pull.yml        # Backup server setup (pull, mounts, external)
 │   ├── casaos.yml             # CasaOS installation
