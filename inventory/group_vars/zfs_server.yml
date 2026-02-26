@@ -1,0 +1,13 @@
+---
+# Configuration for primary server (ZFS storage)
+
+server_role: zfs
+
+# ZFS configuration
+install_zfs: true
+zpools: []
+docker_zfs_storage: true
+
+# Only zfs_server gets an extra user
+add_extra_user: true
+install_hfs: true

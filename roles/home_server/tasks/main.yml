@@ -1,15 +1,42 @@
 ---
-- import_tasks: server_bootstrap.yml
+# Main entry point for home_server role
+# Includes common tasks and conditionally includes server-specific tasks
+
+# Common setup for all servers
+- import_tasks: common.yml
   tags:
     - bootstrap
+    - common
+
+# ZFS setup (primary/storage server only)
+- include_tasks: zfs.yml
+  when: install_zfs | default(false)
+  tags:
+    - zfs
+
+# Backup setup (infra server - push to primary)
+- include_tasks: infra.yml
+  when: server_role | default('') == 'infra'
+  tags:
+    - backup
+
+# Backup setup (backup server - pull from primary)
+- include_tasks: backup_pull.yml
+  when: server_role | default('') == 'backup'
+  tags:
+    - backup
+
+# Additional setup tasks
 - include_tasks: remove_snap.yml
+  tags:
+    - snap
+
 - include_tasks: add_user.yml
+  when: add_extra_user | default(false)
+  tags:
+    - users
+
 - include_tasks: casaos.yml
+  when: install_casaos | default(true)
   tags:
     - casaos
-
-# TODO
-#  - name: import zpools
-  # zpool import ****pool -f
-  # if possible, check if zsf and zpool are fine
-#  - name: Configure Docker with the zfs storage driver

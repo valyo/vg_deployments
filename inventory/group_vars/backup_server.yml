@@ -1,0 +1,34 @@
+---
+# Configuration for backup server (pulls /burkpool from ZFS server)
+
+server_role: backup
+
+# No Docker managed outside CasaOS
+install_docker: false
+
+# HFS+ support for Mac-formatted drives
+install_hfs: true
+
+# Persistent disk mounts
+disk_mounts:
+  - device: /dev/sdc1
+    path: /backup_burkpool
+    fstype: ext4
+  - device: /dev/sdb1
+    path: /cold_storage
+    fstype: ext4
+
+backup_local_dir: /backup_burkpool
+
+# External exFAT drive (mounted on demand when plugged in)
+external_drive_fstype: exfat
+external_drive_mount: /mnt/external_backup
+
+# Backup pull configuration - rsync FROM primary ZFS server
+backup_source_dir: /burkpool
+
+# No scheduled backup - run manually via /usr/local/bin/backup_from_primary.sh
+enable_backup_cron: false
+
+# Rsync options
+backup_rsync_opts: "-avz --delete --progress"

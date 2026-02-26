@@ -5,10 +5,23 @@
   changed_when: false
   failed_when: false
 
-- name: Remove all installed snaps (including lxd, core, snapd)
+# Remove snaps in correct order: apps first, then core*, then snapd
+- name: Remove application snaps (not core or snapd)
   shell: "snap remove --purge {{ item }}"
-  loop: "{{ installed_snaps.stdout_lines }}"
+  loop: "{{ installed_snaps.stdout_lines | reject('match', '^(core|snapd|bare).*') | list }}"
   when: installed_snaps.stdout_lines | length > 0
+  ignore_errors: true
+
+- name: Remove core snaps
+  shell: "snap remove --purge {{ item }}"
+  loop: "{{ installed_snaps.stdout_lines | select('match', '^(core|bare).*') | list }}"
+  when: installed_snaps.stdout_lines | length > 0
+  ignore_errors: true
+
+- name: Remove snapd snap
+  shell: "snap remove --purge snapd"
+  when: "'snapd' in installed_snaps.stdout_lines"
+  ignore_errors: true
 
 - name: Stop and disable snapd services
   systemd:
