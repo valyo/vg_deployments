@@ -71,15 +71,34 @@
   tags:
    - macvlan
 
-- name: Create macvlan connection with NetworkManager
-  shell: |
-    nmcli connection add type macvlan con-name {{ macvlan_name }} ifname {{ macvlan_name }} dev {{ macvlan_parent }} mode bridge ipv4.addresses {{ macvlan_ip }} ipv4.method manual ipv4.routes "{{ macvlan_route }}"
-  args:
-    creates: /etc/NetworkManager/system-connections/{{ macvlan_name }}.nmconnection
+- name: Create macvlan interface (ip + systemd for Ubuntu Server)
+  template:
+    src: macvlan-setup.sh.j2
+    dest: "/usr/local/bin/macvlan-{{ macvlan_name }}.sh"
+    mode: '0755'
+  become: true
   tags:
    - macvlan
 
-- name: Activate the macvlan connection
-  shell: nmcli connection up {{ macvlan_name }}
+- name: Install systemd service for macvlan at boot
+  template:
+    src: macvlan.service.j2
+    dest: "/etc/systemd/system/macvlan-{{ macvlan_name }}.service"
+  become: true
+  tags:
+   - macvlan
+
+- name: Run macvlan setup and enable at boot
+  block:
+    - name: Run macvlan setup script
+      ansible.builtin.command: "/usr/local/bin/macvlan-{{ macvlan_name }}.sh"
+      changed_when: true
+    - name: Reload systemd and enable macvlan service
+      ansible.builtin.systemd:
+        name: "macvlan-{{ macvlan_name }}"
+        daemon_reload: true
+        enabled: true
+        state: started
+  become: true
   tags:
    - macvlan

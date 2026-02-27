@@ -1,0 +1,17 @@
+#!/bin/bash
+# Create macvlan interface for host-container communication (Ubuntu Server / systemd-networkd)
+# Idempotent - safe to run multiple times
+set -e
+
+PARENT="{{ macvlan_parent }}"
+NAME="{{ macvlan_name }}"
+IP="{{ macvlan_ip }}"
+ROUTE="{{ macvlan_route }}"
+
+if ! ip link show "$NAME" &>/dev/null; then
+  ip link add "$NAME" link "$PARENT" type macvlan mode bridge
+  ip addr add "$IP" dev "$NAME"
+  ip link set "$NAME" up
+fi
+
+ip route add "$ROUTE" dev "$NAME" 2>/dev/null || true

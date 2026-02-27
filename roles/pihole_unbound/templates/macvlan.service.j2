@@ -1,0 +1,12 @@
+[Unit]
+Description=Create macvlan interface {{ macvlan_name }} for host-container communication
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/macvlan-{{ macvlan_name }}.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
