@@ -32,9 +32,20 @@
     - infra
     - laptop
 
-- name: Create deployments directory
+- name: Ensure /storage is owned by local user
   file:
-    path: /deployments
+    path: /storage
+    state: directory
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0755"
+  tags:
+    - infra
+    - deployments
+
+- name: Create apps directory on persistent storage
+  file:
+    path: /storage/apps
     state: directory
     owner: "{{ local_user }}"
     group: "{{ local_user }}"
@@ -52,8 +63,8 @@
 
 - name: Deploy backup script
   template:
-    src: backup_script.sh.j2
-    dest: /usr/local/bin/backup_to_primary.sh
+    src: backup_to_burkeng.sh.j2
+    dest: /usr/local/bin/backup_to_burkeng.sh
     owner: root
     group: root
     mode: "0755"
@@ -63,11 +74,11 @@
 - name: Setup backup cron job
   cron:
     name: "Backup to primary server"
-    minute: "{{ backup_cron_minute | default('0') }}"
+    minute: "{{ backup_cron_minute | default('15') }}"
     hour: "{{ backup_cron_hour | default('3') }}"
     day: "{{ backup_cron_day | default('*') }}"
-    job: "/usr/local/bin/backup_to_primary.sh >> /var/log/backup.log 2>&1"
-    user: root
+    job: "/usr/local/bin/backup_to_burkeng.sh >> /var/log/backup.log 2>&1"
+    user: "{{ local_user }}"
     state: "{{ 'present' if enable_backup_cron | default(true) else 'absent' }}"
   tags:
     - backup
@@ -76,23 +87,16 @@
   file:
     path: /var/log/backup.log
     state: touch
-    owner: root
-    group: root
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
     mode: "0644"
   changed_when: false
   tags:
     - backup
 
 - name: Setup log rotation for backup log
-  copy:
-    content: |
-      /var/log/backup.log {
-          weekly
-          rotate 4
-          compress
-          missingok
-          notifempty
-      }
+  template:
+    src: backup.logrotate.j2
     dest: /etc/logrotate.d/backup
     mode: "0644"
   tags:

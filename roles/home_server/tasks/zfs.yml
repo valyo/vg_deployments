@@ -64,6 +64,23 @@
   tags:
     - zfs
 
+- name: Set console blank timeout in GRUB
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: "^GRUB_CMDLINE_LINUX_DEFAULT="
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="consoleblank=60"'
+  register: grub_default
+  tags:
+    - zfs
+    - grub
+
+- name: Update GRUB after default cmdline change
+  ansible.builtin.command: update-grub
+  when: grub_default is changed
+  tags:
+    - zfs
+    - grub
+
 - name: Ensure /storage is owned by local user
   file:
     path: /storage

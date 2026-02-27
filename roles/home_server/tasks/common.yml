@@ -191,8 +191,27 @@
     name: "Save bash history to ZFS server"
     minute: "0"
     hour: "3"
-    job: "/usr/local/bin/save_history.sh"
+    job: "/usr/local/bin/save_history.sh >> /var/log/save_history.log 2>&1"
     user: "{{ local_user }}"
+  tags:
+    - common
+
+- name: Create save_history log file
+  file:
+    path: /var/log/save_history.log
+    state: touch
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: "0644"
+  changed_when: false
+  tags:
+    - common
+
+- name: Setup log rotation for save_history log
+  template:
+    src: save_history.logrotate.j2
+    dest: /etc/logrotate.d/save_history
+    mode: "0644"
   tags:
     - common
 

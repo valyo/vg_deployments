@@ -182,7 +182,7 @@ sudo /usr/local/bin/backup_from_primary.sh --dry-run  # preview only
 
 ### Infra server
 
-**`/usr/local/bin/backup_to_primary.sh`** — Pushes local paths (defined in `backup_paths`) to the ZFS server. Runs automatically via cron (default: daily at 03:00) when `enable_backup_cron: true`.
+**`/usr/local/bin/backup_to_burkeng.sh`** — Pushes local paths (defined in `backup_paths`) to the ZFS server (burkeng). Runs automatically via cron (default: daily at 03:00) when `enable_backup_cron: true`.
 
 ## ZFS pool management
 
@@ -221,7 +221,7 @@ roles/home_server/
 │   └── samba.service          # Avahi service file
 ├── templates/
 │   ├── backup_pull_script.sh.j2    # Backup server: pull from ZFS
-│   ├── backup_script.sh.j2        # Infra server: push to ZFS
+│   ├── backup_to_burkeng.sh.j2    # Infra server: push to ZFS (burkeng)
 │   ├── sync_from_external.sh.j2   # Backup server: sync external drive
 │   ├── disk_status.sh.j2          # ZFS/backup: disk health overview
 │   ├── save_history.sh.j2         # All servers: bash history backup

@@ -1,0 +1,8 @@
+/var/log/backup.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+    create 0644 {{ local_user }} {{ local_user }}
+}
