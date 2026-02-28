@@ -1,0 +1,12 @@
+[Unit]
+Description=Create VLAN {{ homeassistant_vlan30_id }} interface ({{ homeassistant_vlan30_physical_nic }}.{{ homeassistant_vlan30_id }}) for Home Assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vlan30-homeassistant.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

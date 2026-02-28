@@ -1,0 +1,13 @@
+#!/bin/bash
+# Create VLAN 30 interface for Docker macvlan parent
+# Idempotent - safe to run multiple times
+set -e
+
+PARENT="{{ homeassistant_vlan30_physical_nic }}"
+VLAN_ID="{{ homeassistant_vlan30_id }}"
+NAME="${PARENT}.${VLAN_ID}"
+
+if ! ip link show "$NAME" &>/dev/null; then
+  ip link add link "$PARENT" name "$NAME" type vlan id "$VLAN_ID"
+  ip link set "$NAME" up
+fi

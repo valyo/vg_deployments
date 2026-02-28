@@ -1,0 +1,9 @@
+galaxy_info:
+  author: Valentin Georgiev
+  description: Deploy Home Assistant via Docker Compose on VLAN 30
+  license: BSD
+  min_ansible_version: "2.1"
+  galaxy_tags:
+    - docker
+    - homeassistant
+dependencies: []
