@@ -82,6 +82,14 @@
   tags:
     - copy
 
+- name: Generate gai.conf to prefer IPv4 in container
+  ansible.builtin.template:
+    src: gai.conf.j2
+    dest: "{{ workdir }}/gai.conf"
+    mode: '0644'
+  tags:
+    - copy
+
 - name: Deploy the stack
   ansible.builtin.shell: "docker compose up -d"
   args:
