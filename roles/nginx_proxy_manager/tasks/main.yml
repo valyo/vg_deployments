@@ -1,0 +1,77 @@
+---
+# tasks file for nginx_proxy_manager
+- name: Ensure workdir exists
+  ansible.builtin.file:
+    path: "{{ workdir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - copy
+
+- name: Check NPM data directories exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: npm_dirs_stat
+  loop:
+    - "{{ workdir }}/data"
+    - "{{ workdir }}/letsencrypt"
+
+- name: Fail if any NPM data directory is missing
+  ansible.builtin.fail:
+    msg: "NPM data directory missing (restore from backup first): {{ item.item }}"
+  when: not (item.stat.exists | default(false)) or not (item.stat.isdir | default(false))
+  loop: "{{ npm_dirs_stat.results }}"
+
+- name: Ensure NPM data directories have correct ownership and permissions
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "{{ npm_data_dir_mode | default('0755') }}"
+    owner: "{{ npm_data_dir_owner | default(omit) }}"
+    group: "{{ npm_data_dir_group | default(omit) }}"
+  loop:
+    - "{{ workdir }}/data"
+    - "{{ workdir }}/letsencrypt"
+
+- name: Copy docker compose files
+  copy:
+    src: compose.yaml
+    dest: "{{ workdir }}"
+  tags:
+    - copy
+
+- name: Generate .env file from template
+  template:
+    src: env.j2
+    dest: "{{ workdir }}/.env"
+    mode: '0600'
+  tags:
+    - copy
+
+- name: Deploy the stack
+  ansible.builtin.shell: "docker compose up -d"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - up
+
+- name: Tear down the stack
+  ansible.builtin.shell: "docker compose down"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - down
+
+- name: Pull image
+  ansible.builtin.shell: "docker compose pull"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - pull
+
+- name: Recreate the stack
+  ansible.builtin.shell: "docker compose up -d --force-recreate"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - restart

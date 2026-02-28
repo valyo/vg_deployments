@@ -1,0 +1,10 @@
+galaxy_info:
+  author: Valentin Georgiev
+  description: Deploy Nginx Proxy Manager via Docker Compose
+  license: BSD
+  min_ansible_version: 2.1
+  galaxy_tags:
+    - docker
+    - nginx
+    - proxy
+dependencies: []
