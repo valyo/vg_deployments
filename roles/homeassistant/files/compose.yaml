@@ -8,6 +8,7 @@ services:
     volumes:
       - ./config:/config
       - /etc/localtime:/etc/localtime:ro
+      - ./gai.conf:/etc/gai.conf:ro
     networks:
       homeassistant:
         ipv4_address: ${CONTAINER_IP}
