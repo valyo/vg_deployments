@@ -1,2 +1,3 @@
 ---
 # defaults file for pihole_unbound
+# pihole_data_root, pihole_dir_owner, pihole_dir_group are set in vars (encrypted)

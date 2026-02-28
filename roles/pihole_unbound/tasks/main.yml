@@ -8,6 +8,20 @@
   tags:
     - copy
 
+- name: ensure pihole data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ pihole_dir_owner }}"
+    group: "{{ pihole_dir_group }}"
+  loop:
+    - "{{ pihole_data_root }}/pihole"
+    - "{{ pihole_data_root }}/dnsmasq.d"
+  become: true
+  tags:
+    - copy
+
 - name: copy docker compose files
   copy:
     src: compose.yaml

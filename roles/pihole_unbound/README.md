@@ -19,7 +19,8 @@ Variables in vars/main.yml are:
 
     ---
     # vars file for pihole_unbound
-    workdir:              # Directory on the host where docker compose files are copied 
+    workdir:              # Directory on the host where docker compose files are copied
+    pihole_data_root:     # Host path for Pi-hole data. Contains pihole/ and dnsmasq.d/ subdirs.
     macvlan_name:         # Name of the macvlan interface
     macvlan_ip:           # IP address for the macvlan
     macvlan_route:        # Static route to add
@@ -41,6 +42,58 @@ Variables in .env file are (see [my image repo]((https://github.com/valyo/docker
     DOCKER_HOST_NIC=
     DOCKER_NETWORK_SUBNET=
     DOCKER_NETWORK_GATEWAY=
+    PIHOLE_DATA_ROOT=    # host path for Pi-hole data (e.g. /storage/apps/pihole)
+
+
+Migration from Docker named volumes to bind mount
+-------------------------------------------------
+
+Follow these steps **in order** to move Pi-hole data from Docker named volumes to `/storage/apps/pihole`.
+
+**All commands below are on the Pi-hole host** unless noted.
+
+1. **Stop the stack** (from your compose workdir, e.g. `~/pihole_unbound`):
+
+   ```bash
+   docker compose down
+   ```
+
+2. **Create the host directories** (if they don't exist):
+
+   ```bash
+   sudo mkdir -p /storage/apps/pihole/pihole /storage/apps/pihole/dnsmasq.d
+   ```
+
+3. **Copy data from the old volumes** into the new paths:
+
+   ```bash
+   sudo docker run --rm -v etc_pihole-unbound:/from -v /storage/apps/pihole/pihole:/to alpine sh -c "cp -a /from/. /to/"
+   sudo docker run --rm -v etc_pihole_dnsmasq-unbound:/from -v /storage/apps/pihole/dnsmasq.d:/to alpine sh -c "cp -a /from/. /to/"
+   ```
+
+4. **Set ownership** so the container (UID 1000) can read and write:
+
+   ```bash
+   sudo chown -R 1000:1000 /storage/apps/pihole/pihole /storage/apps/pihole/dnsmasq.d
+   ```
+
+5. **From your workstation**, run the playbook so the role deploys the compose and .env that use the bind mount:
+
+   ```bash
+   ansible-playbook deploy_pihole_unbound.yml -e host=infra
+   ```
+
+6. **On the host**, start the stack again (from the compose workdir):
+
+   ```bash
+   docker compose up -d
+   ```
+
+7. **Check** Pi-hole (UI, DNS). When everything works, **optionally** remove the old volumes:
+
+   ```bash
+   docker volume rm etc_pihole-unbound etc_pihole_dnsmasq-unbound
+   ```
 
 
 Dependencies

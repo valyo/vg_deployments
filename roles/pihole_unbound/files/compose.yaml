@@ -21,15 +21,12 @@ services:
     cap_add:
       - SYS_TIME
     volumes:
-      - etc_pihole-unbound:/etc/pihole:rw
-      - etc_pihole_dnsmasq-unbound:/etc/dnsmasq.d:rw
+      - ${PIHOLE_DATA_ROOT}/pihole:/etc/pihole:rw
+      - ${PIHOLE_DATA_ROOT}/dnsmasq.d:/etc/dnsmasq.d:rw
     networks:
       home:
         ipv4_address: ${FTLCONF_LOCAL_IPV4}
     restart: unless-stopped
-volumes:
-  etc_pihole-unbound:
-  etc_pihole_dnsmasq-unbound:
 
 networks:
   home:
