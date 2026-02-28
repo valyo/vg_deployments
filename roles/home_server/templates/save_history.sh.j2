@@ -20,6 +20,8 @@ DEST_HOST="{{ backup_source_host }}"
 {% endif %}
 DEST_USER="{{ local_user }}"
 DEST_DIR="/burkpool/history_files/{{ inventory_hostname }}"
+SSH_KEY="/home/{{ local_user }}/.ssh/id_ed25519_servers"
+SSH_OPTS="-i ${SSH_KEY} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
 
 echo "$LOG_PREFIX Saving history to $DEST_HOST:$DEST_DIR"
 if ! ping -c 1 -W 5 "$DEST_HOST" > /dev/null 2>&1; then
@@ -27,11 +29,9 @@ if ! ping -c 1 -W 5 "$DEST_HOST" > /dev/null 2>&1; then
     exit 1
 fi
 
-ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
-    "${DEST_USER}@${DEST_HOST}" "mkdir -p '$DEST_DIR'"
+ssh ${SSH_OPTS} "${DEST_USER}@${DEST_HOST}" "mkdir -p '$DEST_DIR'"
 
-if scp -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
-    "$HISTORY_FILE" "${DEST_USER}@${DEST_HOST}:${DEST_DIR}/.bash_history"; then
+if scp ${SSH_OPTS} "$HISTORY_FILE" "${DEST_USER}@${DEST_HOST}:${DEST_DIR}/.bash_history"; then
     echo "$LOG_PREFIX Done"
 else
     echo "$LOG_PREFIX ERROR: scp failed"

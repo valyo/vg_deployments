@@ -9,6 +9,8 @@ TARGET_HOST="{{ backup_target_host }}"
 TARGET_USER="{{ local_user }}"
 TARGET_DIR="{{ backup_target_dir | default('/tank/backups/secondary') }}"
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
+SSH_KEY="/home/{{ local_user }}/.ssh/id_ed25519_servers"
+SSH_OPTS="-i ${SSH_KEY} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
 
 # Local paths to backup
 BACKUP_PATHS=(
@@ -29,8 +31,7 @@ if ! ping -c 1 -W 5 "$TARGET_HOST" > /dev/null 2>&1; then
 fi
 
 # Ensure target directory exists on primary
-ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
-    "${TARGET_USER}@${TARGET_HOST}" "mkdir -p '$TARGET_DIR'"
+ssh ${SSH_OPTS} "${TARGET_USER}@${TARGET_HOST}" "mkdir -p '$TARGET_DIR'"
 
 # Perform backup for each local path
 for src_path in "${BACKUP_PATHS[@]}"; do
@@ -46,7 +47,7 @@ for src_path in "${BACKUP_PATHS[@]}"; do
     echo "$LOG_PREFIX Syncing: $src_path -> $TARGET_HOST:$TARGET_DIR"
     
     if rsync $RSYNC_OPTS \
-        -e "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10" \
+        -e "ssh ${SSH_OPTS}" \
         "$src_path" \
         "${TARGET_USER}@${TARGET_HOST}:${TARGET_DIR}/"; then
         echo "$LOG_PREFIX Successfully synced: $src_path"

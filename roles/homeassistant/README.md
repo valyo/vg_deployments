@@ -28,7 +28,7 @@ Main variables in `vars/main.yml`:
     homeassistant_env:
       IMAGE_VERSION: "stable"
       CONTAINER_IP: "192.168.30.3"
-      DOCKER_HOST_NIC_VLAN30: "enp2s0.30"   # fallback if detection fails
+      DOCKER_HOST_NIC_VLAN30: "enp2s0f0.30"   # fallback if detection fails (set per host)
       NETWORK_SUBNET: "192.168.30.0/24"
       NETWORK_GATEWAY: "192.168.30.1"
 
