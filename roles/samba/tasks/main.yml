@@ -1,8 +1,38 @@
 ---
 # tasks file for samba
+- name: Validate Samba share paths do not overlap
+  ansible.builtin.assert:
+    that:
+      - SHARE_1_PATH != SHARE_2_PATH
+      - not SHARE_2_PATH.startswith(SHARE_1_PATH + '/')
+      - not SHARE_1_PATH.startswith(SHARE_2_PATH + '/')
+    fail_msg: >-
+      SHARE_1_PATH ({{ SHARE_1_PATH }}) and SHARE_2_PATH ({{ SHARE_2_PATH }})
+      must be distinct and non-nested.
+  tags:
+    - copy
+
+- name: Check Samba host bind paths exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: samba_bind_paths
+  loop:
+    - "{{ SAMBA_1_PATH }}"
+    - "{{ SAMBA_2_PATH }}"
+  tags:
+    - copy
+
+- name: Fail if Samba host bind path is missing
+  ansible.builtin.fail:
+    msg: "Samba bind source path missing on host: {{ item.item }}"
+  when: not (item.stat.exists | default(false))
+  loop: "{{ samba_bind_paths.results }}"
+  tags:
+    - copy
+
 - name: ensure workdir exists
   ansible.builtin.file:
-    path: "{{ workdir }}"
+    path: "{{ WORKDIR }}"
     state: directory
     mode: '0755'
   tags:
@@ -11,7 +41,7 @@
 - name: copy docker compose files
   copy:
     src: "{{ item }}"
-    dest: "{{ workdir }}"
+    dest: "{{ WORKDIR }}"
   loop:
   - compose.yml
   tags:
@@ -20,42 +50,42 @@
 - name: copy .env from template
   ansible.builtin.template:
     src: env.j2
-    dest: "{{ workdir }}/.env"
+    dest: "{{ WORKDIR }}/.env"
   tags:
     - copy
 
 - name: copy smb.conf from template
   ansible.builtin.template:
     src: smb.conf.j2
-    dest: "{{ workdir }}/smb.conf"
+    dest: "{{ WORKDIR }}/smb.conf"
   tags:
     - copy
 
 - name: deploy the stack
   ansible.builtin.shell: "docker compose up -d"
   args:
-    chdir: "{{ workdir }}"
+    chdir: "{{ WORKDIR }}"
   tags:
     - up
 
 - name: tear down the stack
   ansible.builtin.shell: "docker compose down"
   args:
-    chdir: "{{ workdir }}"
+    chdir: "{{ WORKDIR }}"
   tags:
     - down
 
 - name: pull image
   ansible.builtin.shell: "docker compose pull"
   args:
-    chdir: "{{ workdir }}"
+    chdir: "{{ WORKDIR }}"
   tags:
     - pull
 
 - name: recreate the stack
   ansible.builtin.shell: "docker compose up -d --force-recreate"
   args:
-    chdir: "{{ workdir }}"
+    chdir: "{{ WORKDIR }}"
   tags:
     - restart
 

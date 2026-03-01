@@ -18,16 +18,27 @@ All configuration is centralized in `vars/main.yml` (encrypted with Ansible Vaul
 ```yaml
 ---
 # vars file for samba
-workdir:              # Directory where docker compose files are deployed
-samba_name:           # NetBIOS name and share name
-samba_share_name:     # Share name (can differ from samba_name)
-samba_user:           # Samba username
-samba_group:          # Samba group for write access
-samba_password:       # Samba user password
-samba_uid:            # User ID for file ownership
-samba_gid:            # Group ID for file ownership
-samba_storage:        # Host path to share
+WORKDIR:              # Directory where docker compose files are deployed
+SAMBA_NAME:           # NetBIOS name
+SAMBA_USER:           # Samba username
+SAMBA_GROUP:          # Samba group for write access
+SAMBA_PASSWORD:       # Samba user password
+SAMBA_UID:            # User ID for file ownership
+SAMBA_GID:            # Group ID for file ownership
+SAMBA_1_PATH:         # Host source path for share 1
+SAMBA_2_PATH:         # Host source path for share 2
+SHARE_1_NAME:         # SMB share name exposed to clients
+SHARE_1_PATH:         # Container path used by share 1
+SHARE_2_NAME:         # SMB share name exposed to clients
+SHARE_2_PATH:         # Container path used by share 2
 ```
+
+Path model:
+
+- `SAMBA_1_PATH` / `SAMBA_2_PATH` are absolute paths on the host.
+- `SHARE_1_PATH` / `SHARE_2_PATH` are paths inside the container and are referenced by `smb.conf`.
+- Compose binds each host path to its corresponding container path (`SAMBA_1_PATH -> SHARE_1_PATH`, `SAMBA_2_PATH -> SHARE_2_PATH`).
+- Keep `SHARE_1_PATH` and `SHARE_2_PATH` non-overlapping; the role enforces this.
 
 **Note:** The `vars/main.yml` file is encrypted with Ansible Vault. To edit it:
 

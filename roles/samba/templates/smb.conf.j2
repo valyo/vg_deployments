@@ -1,5 +1,5 @@
 [global]
-        netbios name = {{ samba_name }}
+        netbios name = {{ SAMBA_NAME }}
         server string = samba
         host msdfs = no
         idmap config * : range = 3000-7999
@@ -13,13 +13,23 @@
         printcap name = /dev/null
         disable spoolss = yes
 
-[{{ samba_share_name }}]
-        path = /storage
+[{{ SHARE_1_NAME }}]
+        path = {{ SHARE_1_PATH }}
         comment = Shared
         browseable = yes
         read only = yes
         guest ok = yes
         write list = @smb
-        force user = {{ samba_user }}
-        force group = smb
+        force user = {{ SAMBA_USER }}
+        force group = {{ SAMBA_GROUP }}
+
+[{{ SHARE_2_NAME }}]
+        path = {{ SHARE_2_PATH }}
+        comment = Media Files
+        browseable = yes
+        read only = yes
+        guest ok = yes
+        write list = @smb
+        force user = {{ SAMBA_USER }}
+        force group = {{ SAMBA_GROUP }}
 

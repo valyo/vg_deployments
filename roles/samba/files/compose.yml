@@ -16,6 +16,7 @@ services:
       - 445:445
       - 139:139
     volumes:
-      - ${SAMBA_STORAGE}:/storage
+      - ${SAMBA_1_PATH}:${SHARE_1_PATH}
+      - ${SAMBA_2_PATH}:${SHARE_2_PATH}
       - ./smb.conf:/etc/samba/smb.conf
     restart: always
