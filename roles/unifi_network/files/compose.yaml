@@ -1,0 +1,41 @@
+services:
+  unifi-db:
+    container_name: unifi-db
+    image: mongo:${MONGO_IMAGE_VERSION}
+    restart: unless-stopped
+    volumes:
+      - ${MONGO_DB_PATH}:/data/db
+      - ${MONGO_INIT_SCRIPT_PATH}:/docker-entrypoint-initdb.d/init-mongo.js:ro
+
+  unifi-network-application:
+    container_name: unifi-network-application
+    image: lscr.io/linuxserver/unifi-network-application:${IMAGE_VERSION}
+    depends_on:
+      - unifi-db
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASS: ${MONGO_PASS}
+      MONGO_HOST: unifi-db
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DBNAME: ${MONGO_DBNAME}
+      MEM_LIMIT: ${MEM_LIMIT}
+      MEM_STARTUP: ${MEM_STARTUP}
+      MONGO_TLS: ${MONGO_TLS}
+      MONGO_AUTHSOURCE: ${MONGO_AUTHSOURCE}
+      BIND_PRIV: ${BIND_PRIV}
+      RUNAS_UID0: ${RUNAS_UID0}
+    ports:
+      - "${UNIFI_UI_PORT}:8443"
+      - "${UNIFI_INFORM_PORT}:8080"
+      - "${UNIFI_STUN_PORT}:3478/udp"
+      - "${UNIFI_DISCOVERY_PORT}:10001/udp"
+      - "${UNIFI_GUEST_HTTP_PORT}:8880"
+      - "${UNIFI_GUEST_HTTPS_PORT}:8843"
+      - "${UNIFI_SPEEDTEST_PORT}:6789"
+      - "${UNIFI_SYSLOG_PORT}:5514/udp"
+    volumes:
+      - ${UNIFI_CONFIG_PATH}:/config

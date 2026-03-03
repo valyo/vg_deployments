@@ -1,0 +1,10 @@
+galaxy_info:
+  author: Valentin Georgiev
+  description: Deploy UniFi Network Application via Docker Compose
+  license: BSD
+  min_ansible_version: "2.1"
+  galaxy_tags:
+    - docker
+    - unifi
+    - networking
+dependencies: []

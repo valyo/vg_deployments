@@ -1,0 +1,75 @@
+---
+# tasks file for unifi_network
+- name: Ensure workdir exists
+  ansible.builtin.file:
+    path: "{{ workdir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - copy
+
+- name: Ensure UniFi data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ unifi_data_dir_owner | default(omit) }}"
+    group: "{{ unifi_data_dir_group | default(omit) }}"
+  loop:
+    - "{{ unifi_env.UNIFI_CONFIG_PATH }}"
+    - "{{ unifi_env.MONGO_DB_PATH }}"
+    - "{{ unifi_env.MONGO_INIT_SCRIPT_PATH | dirname }}"
+  tags:
+    - copy
+
+- name: Generate init-mongo.js file
+  ansible.builtin.template:
+    src: init-mongo.js.j2
+    dest: "{{ unifi_env.MONGO_INIT_SCRIPT_PATH }}"
+    mode: '0644'
+    force: false
+  tags:
+    - copy
+
+- name: Copy docker compose files
+  ansible.builtin.copy:
+    src: compose.yaml
+    dest: "{{ workdir }}"
+  tags:
+    - copy
+
+- name: Generate .env file from template
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ workdir }}/.env"
+    mode: '0600'
+  tags:
+    - copy
+
+- name: Deploy the stack
+  ansible.builtin.shell: "docker compose up -d"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - up
+
+- name: Tear down the stack
+  ansible.builtin.shell: "docker compose down"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - down
+
+- name: Pull image
+  ansible.builtin.shell: "docker compose pull"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - pull
+
+- name: Recreate the stack
+  ansible.builtin.shell: "docker compose up -d --force-recreate"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - restart
