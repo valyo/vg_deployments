@@ -1,5 +1,5 @@
 ---
-# Main entry point for home_server role
+# Main entry point for servers role
 # Includes common tasks and conditionally includes server-specific tasks
 
 # Common setup for all servers

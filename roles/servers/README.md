@@ -1,4 +1,4 @@
-# home_server
+# servers
 
 Ansible role for bootstrapping and configuring home servers. Supports three server types via `server_role`: **zfs**, **infra**, and **backup**.
 
@@ -76,13 +76,15 @@ Stored in `inventory/host_vars/<hostname>/vault.yml`:
 - `ansible_user` — SSH user
 - `backup_source_host` — ZFS server IP (backup_server only)
 - `backup_target_host` — ZFS server IP (infra_server only)
+- `backup_target_dir` — remote backup destination path (infra_server only)
+- `backup_paths` — local paths to back up (infra_server only)
 - `external_drive_uuid` — UUID of external backup drive (backup_server only)
 
-Stored in `roles/home_server/vars/main.yml` (vault-encrypted):
+Stored in `roles/servers/vars/main.yml` (vault-encrypted):
 
 - `new_user` — username for the extra user (used when `add_extra_user: true`)
 
-SSH keys in `roles/home_server/files/` are also vault-encrypted.
+SSH keys in `roles/servers/files/` are also vault-encrypted.
 
 ### Backup server specific (`inventory/group_vars/backup_server.yml`)
 
@@ -113,9 +115,9 @@ SSH keys in `roles/home_server/files/` are also vault-encrypted.
 All server types use the same playbook:
 
 ```bash
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=zfs_server --ask-vault-pass
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=infra_server --ask-vault-pass
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=backup_server --ask-vault-pass
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=zfs_server --ask-vault-pass
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=infra_server --ask-vault-pass
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=backup_server --ask-vault-pass
 ```
 
 The inventory can also be used with other roles in this repo:
@@ -130,22 +132,22 @@ Run specific sections only:
 
 ```bash
 # Common setup only
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=backup_server --ask-vault-pass --tags common
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=backup_server --ask-vault-pass --tags common
 
 # ZFS tasks only
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=zfs_server --ask-vault-pass --tags zfs
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=zfs_server --ask-vault-pass --tags zfs
 
 # Backup tasks only
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=backup_server --ask-vault-pass --tags backup
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=backup_server --ask-vault-pass --tags backup
 
 # Disk mounts only
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=backup_server --ask-vault-pass --tags mounts
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=backup_server --ask-vault-pass --tags mounts
 
 # External drive setup only
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=backup_server --ask-vault-pass --tags external
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=backup_server --ask-vault-pass --tags external
 
 # Infra laptop config only
-ansible-playbook -i inventory/hosts setup_home_server.yml -e host=infra_server --ask-vault-pass --tags infra
+ansible-playbook -i inventory/hosts setup_servers.yml -e host=infra_server --ask-vault-pass --tags infra
 ```
 
 Available tags: `common`, `bootstrap`, `apt`, `ssh-keys`, `zfs`, `backup`, `mounts`, `external`, `snap`, `users`, `casaos`, `docker`, `infra`, `laptop`.
@@ -202,7 +204,7 @@ If `docker_zfs_storage: true`, the playbook:
 ## File structure
 
 ```
-roles/home_server/
+roles/servers/
 ├── README.md
 ├── defaults/
 │   └── main.yml               # Default variables

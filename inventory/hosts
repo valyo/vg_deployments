@@ -1,7 +1,7 @@
-# Home server inventory
+# Server inventory
 # Sensitive values (IPs, users) are in host_vars/*/vault.yml
 
-[home_servers:children]
+[servers:children]
 zfs_server
 infra_server
 backup_server

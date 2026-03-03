@@ -20,7 +20,7 @@ BACKUP_PATHS=(
 )
 
 # Rsync options
-RSYNC_OPTS="{{ backup_rsync_opts | default('-avz --delete --progress') }}"
+RSYNC_OPTS="{{ backup_rsync_opts | default('-avz --delete --progress --numeric-ids') }}"
 
 echo "$LOG_PREFIX Starting backup to $TARGET_HOST:$TARGET_DIR"
 
@@ -46,7 +46,8 @@ for src_path in "${BACKUP_PATHS[@]}"; do
     
     echo "$LOG_PREFIX Syncing: $src_path -> $TARGET_HOST:$TARGET_DIR"
     
-    if rsync $RSYNC_OPTS \
+    if sudo rsync $RSYNC_OPTS \
+        --rsync-path="sudo rsync" \
         -e "ssh ${SSH_OPTS}" \
         "$src_path" \
         "${TARGET_USER}@${TARGET_HOST}:${TARGET_DIR}/"; then

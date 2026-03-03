@@ -3,13 +3,9 @@
 
 server_role: infra
 
-# Backup configuration - push data TO primary server's ZFS storage
-backup_target_dir: /burkpool/backups/infra
-
-# Local paths to backup (Docker persistent data, etc.)
-backup_paths: []
-  # - /opt/docker/appdata
-  # - /home/{{ local_user }}/docker
+# Sensitive backup path variables are stored in host_vars/infra/vault.yml:
+# - backup_target_dir
+# - backup_paths
 
 # Backup schedule (cron format)
 backup_cron_minute: "0"

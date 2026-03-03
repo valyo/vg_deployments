@@ -61,6 +61,19 @@
   tags:
     - backup
 
+- name: Validate required backup variables are defined
+  ansible.builtin.assert:
+    that:
+      - backup_target_dir is defined
+      - backup_target_dir | length > 0
+      - backup_paths is defined
+      - backup_paths | length > 0
+    fail_msg: >-
+      Define backup_target_dir and backup_paths in encrypted host vars
+      (inventory/host_vars/infra/vault.yml) before running backup tasks.
+  tags:
+    - backup
+
 - name: Deploy backup script
   template:
     src: backup_to_burkeng.sh.j2
@@ -68,6 +81,16 @@
     owner: root
     group: root
     mode: "0755"
+  tags:
+    - backup
+
+- name: Allow user to run rsync via sudo for backups
+  copy:
+    content: |
+      {{ local_user }} ALL=(root) NOPASSWD: /usr/bin/rsync, /bin/rsync
+    dest: /etc/sudoers.d/backup-rsync
+    mode: "0440"
+    validate: "visudo -cf %s"
   tags:
     - backup
 
