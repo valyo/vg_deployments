@@ -1,7 +1,9 @@
 ---
 services:
   app:
-    image: ghcr.io/valyo/sh-portal:0.1.0
+    container_name: sh_portal
+    image: ghcr.io/valyo/sh-portal:${IMAGE_VERSION}
+    user: "${SH_PORTAL_UID}:${SH_PORTAL_GID}"
     restart: unless-stopped
     ports:
       - "${PORT:-8087}:5000"
@@ -38,7 +40,8 @@ services:
 
 
   mailcatcher:
-    image: sj26/mailcatcher:v0.10.0
+    container_name: sh_portal_mailcatcher
+    image: sj26/mailcatcher:${MAILCATCHER_IMAGE_VERSION}
     ports:
-      - "1025:1025"  # SMTP port
-      - "1088:1080"  # Web interface
+      - "${MAILCATCHER_SMTP_PORT}:1025"  # SMTP port
+      - "${MAILCATCHER_WEB_PORT}:1080"  # Web interface

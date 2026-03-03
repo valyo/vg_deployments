@@ -1,6 +1,6 @@
 ---
-# tasks file for pihole_unbound
-- name: ensure workdir exists
+# tasks file for sh_portal
+- name: Ensure workdir exists
   ansible.builtin.file:
     path: "{{ workdir }}"
     state: directory
@@ -8,85 +8,86 @@
   tags:
     - copy
 
-- name: ensure data directory exists
+- name: Ensure SH Portal data directories exist
   ansible.builtin.file:
-    path: "{{ workdir }}/data"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
-  tags:
-    - copy
-
-- name: ensure credentials directory exists
-  ansible.builtin.file:
-    path: "{{ workdir }}/data/credentials"
-    state: directory
-    mode: '0755'
-  tags:
-    - copy
-
-- name: ensure instance directory exists
-  ansible.builtin.file:
-    path: "{{ workdir }}/data/instance"
-    state: directory
-    mode: '0755'
-  tags:
-    - copy
-
-- name: copy docker compose files
-  copy:
-    src: "{{ item }}"
-    dest: "{{ workdir }}"
+    owner: "{{ sh_portal_data_dir_owner | default(omit) }}"
+    group: "{{ sh_portal_data_dir_group | default(omit) }}"
   loop:
-  - docker-compose.yaml
-  - .env
-  - service-account.json
+    - "{{ workdir }}/data"
+    - "{{ workdir }}/data/credentials"
+    - "{{ workdir }}/data/instance"
+    - "{{ workdir }}/data/invoices"
+    - "{{ workdir }}/data/certificates"
   tags:
     - copy
 
-- name: copy Google sheet credentials file
-  copy:
+- name: Copy docker compose file
+  ansible.builtin.copy:
+    src: docker-compose.yaml
+    dest: "{{ workdir }}/docker-compose.yaml"
+  tags:
+    - copy
+
+- name: Generate .env file from template
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ workdir }}/.env"
+    mode: '0600'
+  tags:
+    - copy
+
+- name: Copy Google sheet credentials file to workdir
+  ansible.builtin.copy:
+    src: service-account.json
+    dest: "{{ workdir }}/service-account.json"
+    mode: '0600'
+  tags:
+    - copy
+
+- name: Copy Google sheet credentials file to app credentials directory
+  ansible.builtin.copy:
     src: service-account.json
     dest: "{{ workdir }}/data/credentials/service-account.json"
+    mode: '0600'
   tags: 
     - copy
 
-- name: copy instance database file
-  copy:
-    src: sh_portal.db
+- name: Seed SH Portal database file (optional)
+  ansible.builtin.copy:
+    src: "{{ sh_portal_seed_db_file }}"
     dest: "{{ workdir }}/data/instance/sh_portal.db"
+    mode: '0644'
+  when: sh_portal_seed_db_file | default('') | length > 0
   tags:
     - copy
 
-- name: deploy the stack
+- name: Deploy the stack
   ansible.builtin.shell: "docker compose up -d"
   args:
     chdir: "{{ workdir }}"
   tags:
     - up
 
-- name: tear down the stack
+- name: Tear down the stack
   ansible.builtin.shell: "docker compose down"
   args:
     chdir: "{{ workdir }}"
   tags:
     - down
 
-- name: pull image
+- name: Pull image
   ansible.builtin.shell: "docker compose pull"
   args:
     chdir: "{{ workdir }}"
   tags:
     - pull
 
-- name: recreate the stack
+- name: Recreate the stack
   ansible.builtin.shell: "docker compose up -d --force-recreate"
   args:
     chdir: "{{ workdir }}"
   tags:
     - restart
-
-- name: Retrieve host vars
-  debug:
-    var=ansible_facts['default_ipv4']['interface']
-  tags:
-   - test
