@@ -10,11 +10,11 @@
 
 - name: Ensure Home Assistant config directory exists
   ansible.builtin.file:
-    path: "{{ workdir }}/config"
+    path: "{{ workdir }}/ha_config"
     state: directory
     mode: '0755'
-    owner: "{{ homeassistant_config_owner | default(omit) }}"
-    group: "{{ homeassistant_config_group | default(omit) }}"
+    owner: "{{ homeassistant_env.HOMEASSISTANT_UID }}"
+    group: "{{ homeassistant_env.HOMEASSISTANT_GID }}"
   tags:
     - copy
 
@@ -79,14 +79,6 @@
     src: env.j2
     dest: "{{ workdir }}/.env"
     mode: '0600'
-  tags:
-    - copy
-
-- name: Generate gai.conf to prefer IPv4 in container
-  ansible.builtin.template:
-    src: gai.conf.j2
-    dest: "{{ workdir }}/gai.conf"
-    mode: '0644'
   tags:
     - copy
 

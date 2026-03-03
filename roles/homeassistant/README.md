@@ -4,9 +4,8 @@ Home Assistant on VLAN 30
 This role deploys Home Assistant with Docker Compose.
 
 - Compose and `.env` are written to `/storage/apps/homeassistant` (default `workdir`).
-- Home Assistant container runs with a static IP on VLAN 30 (default `192.168.30.3`).
+- Home Assistant container runs with a static IP on VLAN 30.
 - The role ensures a VLAN sub-interface exists on the host (for Docker parent interface).
-- IPv6 is disabled in the container and `gai.conf` is provided to prefer IPv4.
 
 
 Requirements
@@ -14,7 +13,7 @@ Requirements
 
 - Docker + Docker Compose plugin installed on the target host.
 - Host NIC uplink must carry VLAN 30 tagged.
-- Router/switch must route VLAN 30 (`192.168.30.0/24`) with gateway reachable from the host.
+- Router/switch must route your VLAN 30 subnet with gateway reachable from the host.
 
 
 Role Variables
@@ -24,13 +23,15 @@ Main variables in `vars/main.yml`:
 
     ---
     workdir: /storage/apps/homeassistant
-    homeassistant_use_vlan30: true
+    homeassistant_use_vlan30: <true|false>
     homeassistant_env:
-      IMAGE_VERSION: "stable"
-      CONTAINER_IP: "192.168.30.3"
-      DOCKER_HOST_NIC_VLAN30: "enp2s0f0.30"   # fallback if detection fails (set per host)
-      NETWORK_SUBNET: "192.168.30.0/24"
-      NETWORK_GATEWAY: "192.168.30.1"
+      IMAGE_VERSION: "<tag>"
+      HOMEASSISTANT_UID: "<uid>"
+      HOMEASSISTANT_GID: "<gid>"
+      CONTAINER_IP: "<vlan30_ip>"
+      DOCKER_HOST_NIC_VLAN30: "<parent_iface.vlan_id>"   # fallback if detection fails
+      NETWORK_SUBNET: "<cidr>"
+      NETWORK_GATEWAY: "<gateway_ip>"
 
 Variables in `defaults/main.yml`:
 
@@ -38,9 +39,9 @@ Variables in `defaults/main.yml`:
 
 Optional overrides:
 
-- `homeassistant_vlan30_physical_nic` (for example `enp2s0f0`)
-- `homeassistant_config_owner`
-- `homeassistant_config_group`
+- `homeassistant_vlan30_physical_nic` (for example `eth0`)
+- `homeassistant_env.HOMEASSISTANT_UID` / `homeassistant_env.HOMEASSISTANT_GID` (also used as ownership for `{{ workdir }}/ha_config`)
+- Put real values in encrypted host/group vars (Vault); keep README examples generic.
 
 
 Generated Files
@@ -50,8 +51,7 @@ In `{{ workdir }}`:
 
 - `compose.yaml`
 - `.env`
-- `gai.conf`
-- `config/`
+- `ha_config/`
 
 System files on host:
 
@@ -62,7 +62,7 @@ System files on host:
 Tags
 ----
 
-- `copy` - render/copy compose/env/gai.conf and directory setup
+- `copy` - render/copy compose/env and directory setup
 - `up` - run `docker compose up -d`
 - `restart` - run `docker compose up -d --force-recreate`
 - `upgrade` - run upgrade-only tasks
@@ -91,4 +91,3 @@ Run:
 Upgrade flow:
 
     ansible-playbook deploy_homeassistant.yml -e host=infra --tags upgrade
-

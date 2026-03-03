@@ -2,13 +2,10 @@ services:
   homeassistant:
     container_name: homeassistant
     image: ghcr.io/home-assistant/home-assistant:${IMAGE_VERSION}
-    sysctls:
-      - net.ipv6.conf.all.disable_ipv6=1
-      - net.ipv6.conf.default.disable_ipv6=1
+    user: "${HOMEASSISTANT_UID}:${HOMEASSISTANT_GID}"
     volumes:
-      - ./config:/config
+      - ./ha_config:/config
       - /etc/localtime:/etc/localtime:ro
-      - ./gai.conf:/etc/gai.conf:ro
     networks:
       homeassistant:
         ipv4_address: ${CONTAINER_IP}
