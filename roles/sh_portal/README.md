@@ -1,7 +1,7 @@
 SH Portal
 =========
 
-Deploys SH Portal and Mailcatcher with Docker Compose using the same role pattern as the other app roles.
+Deploys SH Portal for production with Docker Compose.
 
 The role manages:
 - Docker Compose file
@@ -23,13 +23,18 @@ Defined in `roles/sh_portal/vars/main.yml`:
 
 ```yaml
 workdir: /storage/apps/sh_portal
-sh_portal_data_dir_owner: "1000"
-sh_portal_data_dir_group: "1000"
 sh_portal_seed_db_file: ""  # optional file in roles/sh_portal/files/
 
 sh_portal_env:
-  IMAGE_VERSION: "0.1.0"
-  PORT: "8087"
+  IMAGE_VERSION: "<tag>"
+  SH_PORTAL_UID: "<uid>"
+  SH_PORTAL_GID: "<gid>"
+  PORT: "<port>"
+  DB_NAME: "<sqlite_file_name>"
+  DATABASE_URL: "sqlite:///<sqlite_file_name>"
+  FLASK_DEBUG: "<True|False>"
+  BASE_URL: "<public_base_url>"
+  MAIL_BACKEND: "<mailcatcher|google>"
   # ... see vars/main.yml for full list
 ```
 
@@ -63,4 +68,9 @@ Operational Notes
 - Mailcatcher SMTP/Web ports are controlled by:
   - `MAILCATCHER_SMTP_PORT` (default `1025`)
   - `MAILCATCHER_WEB_PORT` (default `1088`)
-- When behind reverse proxy, set `OAUTH_REDIRECT_URI` to the public HTTPS URL, e.g. `https://shportal.example.com/callback`
+- Mail behavior follows app logic in `__init__.py`:
+  - set `MAIL_BACKEND` to switch mode (`google` or `mailcatcher`)
+  - for `google`, set `MAIL_USERNAME` and `MAIL_PASSWORD` (app password)
+  - SMTP host/port/TLS are taken from app defaults
+- Mailcatcher runs only in the optional Compose `dev` profile.
+- Set `BASE_URL` to the externally reachable URL for OAuth callback/login flow.

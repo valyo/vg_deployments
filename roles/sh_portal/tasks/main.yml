@@ -13,8 +13,8 @@
     path: "{{ item }}"
     state: directory
     mode: '0755'
-    owner: "{{ sh_portal_data_dir_owner | default(omit) }}"
-    group: "{{ sh_portal_data_dir_group | default(omit) }}"
+    owner: "{{ sh_portal_env.SH_PORTAL_UID }}"
+    group: "{{ sh_portal_env.SH_PORTAL_GID }}"
   loop:
     - "{{ workdir }}/data"
     - "{{ workdir }}/data/credentials"
@@ -39,14 +39,6 @@
   tags:
     - copy
 
-- name: Copy Google sheet credentials file to workdir
-  ansible.builtin.copy:
-    src: service-account.json
-    dest: "{{ workdir }}/service-account.json"
-    mode: '0600'
-  tags:
-    - copy
-
 - name: Copy Google sheet credentials file to app credentials directory
   ansible.builtin.copy:
     src: service-account.json
@@ -58,7 +50,7 @@
 - name: Seed SH Portal database file (optional)
   ansible.builtin.copy:
     src: "{{ sh_portal_seed_db_file }}"
-    dest: "{{ workdir }}/data/instance/sh_portal.db"
+    dest: "{{ workdir }}/data/instance/{{ sh_portal_env.DB_NAME }}"
     mode: '0644'
   when: sh_portal_seed_db_file | default('') | length > 0
   tags:

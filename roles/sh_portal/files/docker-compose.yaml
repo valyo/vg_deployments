@@ -20,17 +20,13 @@ services:
       - .env
     environment:
       # Mail configuration - set these in .env or override here
-      - MAIL_SERVER=${MAIL_SERVER:-smtp.gmail.com}
-      - MAIL_PORT=${MAIL_PORT:-587}
-      - MAIL_USE_TLS=${MAIL_USE_TLS:-True}
-      - MAIL_USE_SSL=${MAIL_USE_SSL:-False}
+      - MAIL_BACKEND=${MAIL_BACKEND:-google}
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER}
+      - BASE_URL=${BASE_URL}
       # Google Sheets credentials path (inside container)
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
-      - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI}
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/"]
       interval: 30s
@@ -42,6 +38,8 @@ services:
   mailcatcher:
     container_name: sh_portal_mailcatcher
     image: sj26/mailcatcher:${MAILCATCHER_IMAGE_VERSION}
+    profiles:
+      - dev
     ports:
       - "${MAILCATCHER_SMTP_PORT}:1025"  # SMTP port
       - "${MAILCATCHER_WEB_PORT}:1080"  # Web interface
