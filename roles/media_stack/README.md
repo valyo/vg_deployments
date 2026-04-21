@@ -1,38 +1,84 @@
-Role Name
+Media Stack
 =========
 
-A brief description of the role goes here.
+Deploys a Docker Compose media stack (Transmission, Radarr, Sonarr, Jackett, Prowlarr, Jellyfin, optional Gluetun VPN).
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+- Docker and Docker Compose plugin installed on target host.
+- Host bind paths configured in env values (`TX_DOWNLOADS`, `RADARR_DATA`, `SONARR_DATA`, `JELLYFIN_DATA`).
+- If using VPN profile, valid VPN credentials in env values.
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+Defined in `roles/media_stack/vars/main.yml`:
 
-Dependencies
+```yaml
+workdir: "<app_workdir_path>"
+media_stack_profile: "<stack_profile>"
+
+media_stack_env:
+  PUID: "<uid>"
+  PGID: "<gid>"
+  TZ: "<timezone>"
+  OPENVPN_USER: "<set-in-vault>"
+  OPENVPN_PASSWORD: "<set-in-vault>"
+  TX_USER: "<set-in-vault>"
+  TX_PASSWORD: "<set-in-vault>"
+  TX_DOWNLOADS: "<downloads_bind_path>"
+  RADARR_DATA: "<radarr_data_bind_path>"
+  SONARR_DATA: "<sonarr_data_bind_path>"
+  JELLYFIN_CONFIG: "<jellyfin_config_bind_path>"
+  JELLYFIN_DATA: "<jellyfin_data_bind_path>"
+  JELLYFIN_IP: "<iot_vlan_static_ip>"
+  COMPOSE_PROJECT_NAME: "<compose_project_name>"
+```
+
+Only image version defaults are kept in `defaults/main.yml`:
+
+- `media_stack_gluetun_image_version`
+- `media_stack_transmission_image_version`
+- `media_stack_radarr_image_version`
+- `media_stack_sonarr_image_version`
+- `media_stack_jackett_image_version`
+- `media_stack_prowlarr_image_version`
+- `media_stack_jellyfin_image_version`
+
+`media_stack_env` is rendered to `{{ workdir }}/.env` via `templates/env.j2`.
+Use a fixed `COMPOSE_PROJECT_NAME` to keep Docker named volumes stable across different directories/deploy paths.
+
+Store real values in Vault-encrypted variables and override there. Do not commit concrete credentials, tokens, or host-specific infrastructure values in plaintext.
+
+Runtime user
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+LinuxServer containers use `PUID` and `PGID` environment variables for runtime permissions.
+The `vpn` container requires elevated network capabilities (`NET_ADMIN`).
+
+Jellyfin network
+----------------
+
+Jellyfin is attached to an external Docker network with static IP:
+
+- `JELLYFIN_IP` (set to your reserved IoT VLAN address)
+
+Tags
+----
+
+- `copy` - write compose/env and ensure workdir
+- `up` - `docker compose --profile {{ media_stack_profile }} up -d`
+- `down` - `docker compose --profile {{ media_stack_profile }} down`
+- `pull` - `docker compose --profile {{ media_stack_profile }} pull`
+- `restart` - `docker compose --profile {{ media_stack_profile }} up -d --force-recreate`
 
 Example Playbook
 ----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
-
-License
--------
-
-BSD
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+```yaml
+---
+- hosts: "{{ host }}"
+  roles:
+    - media_stack
+```
