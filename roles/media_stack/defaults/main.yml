@@ -1,3 +1,9 @@
 ---
 # defaults file for media_stack
-workdir: /path_to_wokring_dir/
+media_stack_gluetun_image_version: "v3.32"
+media_stack_transmission_image_version: "latest"
+media_stack_radarr_image_version: "latest"
+media_stack_sonarr_image_version: "latest"
+media_stack_jackett_image_version: "latest"
+media_stack_prowlarr_image_version: "1.0.1-develop"
+media_stack_jellyfin_image_version: "latest"

@@ -1,25 +1,59 @@
 ---
 # tasks file for media_stack
-- name: copy docker compose files
-  copy:
-    src: "{{ item }}"
-    dest: "{{ workdir }}{{ item }}"
-  loop:
-  - docker-compose.yml
-  - .env
+- name: Ensure workdir exists
+  ansible.builtin.file:
+    path: "{{ workdir }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ media_stack_owner }}"
+    group: "{{ media_stack_group }}"
   tags:
     - copy
 
-- name: deploy the stack
-  ansible.builtin.shell: "docker compose --profile stack-1 up -d"
+- name: Copy docker compose file
+  ansible.builtin.copy:
+    src: compose.yaml
+    dest: "{{ workdir }}/compose.yaml"
+    mode: "0644"
+    owner: "{{ media_stack_owner }}"
+    group: "{{ media_stack_group }}"
+  tags:
+    - copy
+
+- name: Generate .env file from template
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ workdir }}/.env"
+    mode: "0600"
+    owner: "{{ media_stack_owner }}"
+    group: "{{ media_stack_group }}"
+  tags:
+    - copy
+
+- name: Deploy the stack
+  ansible.builtin.shell: "docker compose --profile {{ media_stack_profile }} up -d"
   args:
     chdir: "{{ workdir }}"
   tags:
     - up
 
-- name: tear down the stack
-  ansible.builtin.shell: "docker compose --profile stack-1 down"
+- name: Tear down the stack
+  ansible.builtin.shell: "docker compose --profile {{ media_stack_profile }} down"
   args:
     chdir: "{{ workdir }}"
   tags:
     - down
+
+- name: Pull image
+  ansible.builtin.shell: "docker compose --profile {{ media_stack_profile }} pull"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - pull
+
+- name: Recreate the stack
+  ansible.builtin.shell: "docker compose --profile {{ media_stack_profile }} up -d --force-recreate"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - restart
