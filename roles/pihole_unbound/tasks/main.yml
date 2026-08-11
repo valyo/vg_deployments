@@ -1,5 +1,6 @@
 ---
 # tasks file for pihole_unbound
+
 - name: ensure workdir exists
   ansible.builtin.file:
     path: "{{ workdir }}"
@@ -23,14 +24,78 @@
     - copy
 
 - name: copy docker compose files
-  copy:
+  ansible.builtin.copy:
     src: compose.yaml
     dest: "{{ workdir }}"
   tags:
     - copy
 
+# --- Host macvlan (needed before compose creates the docker macvlan network) ---
+
+- name: Get the macvlan parent interface
+  ansible.builtin.set_fact:
+    macvlan_parent: "{{ ansible_facts['default_ipv4']['interface'] }}"
+  tags:
+    - macvlan
+    - copy
+    - up
+
+- name: Prefer vault DOCKER_HOST_NIC when set (e.g. VLAN subinterface like eth0.10)
+  ansible.builtin.set_fact:
+    macvlan_parent: "{{ pihole_env.DOCKER_HOST_NIC }}"
+  when:
+    - pihole_env.DOCKER_HOST_NIC is defined
+    - pihole_env.DOCKER_HOST_NIC | length > 0
+    - "'.' in pihole_env.DOCKER_HOST_NIC"
+  tags:
+    - macvlan
+    - copy
+    - up
+
+- name: Show the selected macvlan parent interface
+  ansible.builtin.debug:
+    msg: "Selected macvlan_parent: {{ macvlan_parent }}"
+  tags:
+    - macvlan
+    - copy
+    - up
+
+- name: Create macvlan interface (ip + systemd for Ubuntu Server)
+  ansible.builtin.template:
+    src: macvlan-setup.sh.j2
+    dest: "/usr/local/bin/macvlan-{{ macvlan_name }}.sh"
+    mode: '0755'
+  become: true
+  tags:
+    - macvlan
+
+- name: Install systemd service for macvlan at boot
+  ansible.builtin.template:
+    src: macvlan.service.j2
+    dest: "/etc/systemd/system/macvlan-{{ macvlan_name }}.service"
+  become: true
+  tags:
+    - macvlan
+
+- name: Run macvlan setup and enable at boot
+  block:
+    - name: Run macvlan setup script
+      ansible.builtin.command: "/usr/local/bin/macvlan-{{ macvlan_name }}.sh"
+      changed_when: true
+    - name: Reload systemd and enable macvlan service
+      ansible.builtin.systemd:
+        name: "macvlan-{{ macvlan_name }}"
+        daemon_reload: true
+        enabled: true
+        state: started
+  become: true
+  tags:
+    - macvlan
+
+# --- Compose env + deploy (after parent NIC is known) ---
+
 - name: generate .env file from template
-  template:
+  ansible.builtin.template:
     src: env.j2
     dest: "{{ workdir }}/.env"
     mode: '0600'
@@ -49,6 +114,7 @@
   args:
     chdir: "{{ workdir }}"
   tags:
+    - never
     - down
 
 - name: pull image
@@ -56,6 +122,7 @@
   args:
     chdir: "{{ workdir }}"
   tags:
+    - never
     - pull
 
 - name: recreate the stack
@@ -63,56 +130,5 @@
   args:
     chdir: "{{ workdir }}"
   tags:
+    - never
     - restart
-
-- name: Retrieve host vars
-  debug:
-    var=ansible_facts['default_ipv4']['interface']
-  tags:
-   - test
-
-- name: Get the macvlan parent interface
-  set_fact:
-    macvlan_parent: "{{ ansible_facts['default_ipv4']['interface'] }}"
-    # macvlan_parent: "{{ ansible_facts['ansible_interfaces'] }}"
-  # when: bla is not defined
-  tags:
-   - macvlan
-
-- name: Show the selected macvlan parent interface
-  debug:
-    msg: "Selected macvlan_parent: {{ macvlan_parent }}"
-  tags:
-   - macvlan
-
-- name: Create macvlan interface (ip + systemd for Ubuntu Server)
-  template:
-    src: macvlan-setup.sh.j2
-    dest: "/usr/local/bin/macvlan-{{ macvlan_name }}.sh"
-    mode: '0755'
-  become: true
-  tags:
-   - macvlan
-
-- name: Install systemd service for macvlan at boot
-  template:
-    src: macvlan.service.j2
-    dest: "/etc/systemd/system/macvlan-{{ macvlan_name }}.service"
-  become: true
-  tags:
-   - macvlan
-
-- name: Run macvlan setup and enable at boot
-  block:
-    - name: Run macvlan setup script
-      ansible.builtin.command: "/usr/local/bin/macvlan-{{ macvlan_name }}.sh"
-      changed_when: true
-    - name: Reload systemd and enable macvlan service
-      ansible.builtin.systemd:
-        name: "macvlan-{{ macvlan_name }}"
-        daemon_reload: true
-        enabled: true
-        state: started
-  become: true
-  tags:
-   - macvlan

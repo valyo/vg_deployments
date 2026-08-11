@@ -1,0 +1,16 @@
+---
+# Defaults for infra_restore
+# Reuses backup_* vars from inventory/host_vars/infra/vault.yml
+
+restore_rsync_opts: "-avz --numeric-ids --progress"
+restore_rsync_delete: false
+restore_dry_run: false
+restore_stop_stacks: true
+restore_start_stacks: true
+restore_run_via_ansible: true
+
+# Empty = restore all paths from backup_paths
+restore_paths: []
+
+# Empty = auto-discover compose.yaml / docker-compose.yaml under restore paths
+restore_compose_dirs: "{{ infra_restore_compose_dirs | default([]) }}"

@@ -1,0 +1,63 @@
+---
+# Restart stacks after restore (ownership preserved by rsync --numeric-ids)
+
+- name: Re-discover compose directories after restore
+  ansible.builtin.find:
+    paths: "{{ infra_restore_effective_paths }}"
+    patterns:
+      - compose.yaml
+      - docker-compose.yaml
+    recurse: true
+    file_type: file
+  register: infra_restore_compose_files_after
+  when:
+    - restore_compose_dirs | default([]) | length == 0
+    - restore_start_stacks | default(true)
+    - not (restore_dry_run | default(false))
+  failed_when: false
+
+- name: Refresh compose dirs for start
+  ansible.builtin.set_fact:
+    infra_restore_compose_dirs_effective: "{{ restore_compose_dirs if (restore_compose_dirs | default([]) | length > 0) else (infra_restore_compose_files_after.files | default([]) | map(attribute='path') | map('dirname') | unique | list) }}"
+  when:
+    - restore_start_stacks | default(true)
+    - not (restore_dry_run | default(false))
+
+- name: Ensure Docker is running before starting stacks
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+  loop:
+    - docker.socket
+    - docker.service
+  when:
+    - restore_start_stacks | default(true)
+    - not (restore_dry_run | default(false))
+    - (infra_restore_compose_dirs_effective | default([]) | length) > 0
+
+- name: Start docker compose stacks after restore
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ item }}"
+  loop: "{{ infra_restore_compose_dirs_effective | default([]) }}"
+  become_user: "{{ local_user }}"
+  register: infra_restore_compose_up
+  failed_when: false
+  when:
+    - restore_start_stacks | default(true)
+    - not (restore_dry_run | default(false))
+
+- name: Warn about compose stacks that failed to start
+  ansible.builtin.debug:
+    msg: >-
+      docker compose up failed for {{ item.item }} (rc={{ item.rc }}):
+      {{ item.stderr | default(item.msg) | trim }}
+  loop: "{{ infra_restore_compose_up.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item | default('unknown') }}"
+  when:
+    - restore_start_stacks | default(true)
+    - not (restore_dry_run | default(false))
+    - infra_restore_compose_up is defined
+    - item.rc is defined
+    - item.rc != 0

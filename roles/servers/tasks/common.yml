@@ -68,12 +68,17 @@
     update_cache: yes
   when: install_docker | default(true)
 
-- name: Update apt and install docker-ce
+- name: Update apt and install docker-ce and compose plugin
   apt:
-    name: docker-ce
+    name:
+      - docker-ce
+      - docker-compose-plugin
     state: latest
     update_cache: true
   when: install_docker | default(true)
+  tags:
+    - docker
+    - apt
 
 - name: Add current user to docker group
   ansible.builtin.user:

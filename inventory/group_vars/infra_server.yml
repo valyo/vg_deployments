@@ -14,4 +14,17 @@ backup_cron_day: "*"
 enable_backup_cron: true
 
 # Rsync options
-backup_rsync_opts: "-avz --delete --progress"
+backup_rsync_opts: "-avz --delete --progress --numeric-ids"
+
+# Optional explicit compose dirs for infra_restore stop/start.
+# Empty list = auto-discover compose.yaml under restore paths.
+infra_restore_compose_dirs: []
+# Example:
+# infra_restore_compose_dirs:
+#   - /storage/apps/homeassistant
+#   - /storage/apps/pihole_unbound
+#   - /storage/apps/unifi-network
+#   - /storage/apps/nginx-proxy-manager
+#   - /storage/apps/trading_log
+#   - /storage/apps/sh_webshop
+#   - /storage/apps/sh_portal

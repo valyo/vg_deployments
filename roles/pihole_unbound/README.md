@@ -25,6 +25,10 @@ Variables in vars/main.yml are:
     macvlan_ip:           # IP address for the macvlan
     macvlan_route:        # Static route to add
 
+`DOCKER_HOST_NIC` for compose is set from the host default IPv4 interface at deploy time
+(`ansible_facts['default_ipv4']['interface']`). If `pihole_env.DOCKER_HOST_NIC` contains a
+dot (VLAN subinterface form, e.g. `enp2s0f0.10`), that vault value wins.
+
 Variables in .env file are (see [my image repo]((https://github.com/valyo/docker-pihole-unbound)) and [official pihole container repo](https://github.com/pi-hole/docker-pi-hole) for all variables):
 
     FTLCONF_LOCAL_IPV4=
@@ -39,7 +43,7 @@ Variables in .env file are (see [my image repo]((https://github.com/valyo/docker
     DNSSEC=
     HOSTNAME=           # container hostname
     PIHOLE_DOMAIN=      # contained domain
-    DOCKER_HOST_NIC=
+    DOCKER_HOST_NIC=    # set from live default NIC (or vault VLAN form)
     DOCKER_NETWORK_SUBNET=
     DOCKER_NETWORK_GATEWAY=
     PIHOLE_DATA_ROOT=    # host path for Pi-hole data (e.g. /storage/apps/pihole)

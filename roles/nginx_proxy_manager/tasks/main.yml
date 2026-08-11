@@ -32,6 +32,7 @@
   loop:
     - "{{ workdir }}/data"
     - "{{ workdir }}/letsencrypt"
+  become: true
 
 - name: Copy docker compose files
   copy:
@@ -60,6 +61,7 @@
   args:
     chdir: "{{ workdir }}"
   tags:
+    - never
     - down
 
 - name: Pull image
@@ -67,6 +69,7 @@
   args:
     chdir: "{{ workdir }}"
   tags:
+    - never
     - pull
 
 - name: Recreate the stack
@@ -74,4 +77,5 @@
   args:
     chdir: "{{ workdir }}"
   tags:
+    - never
     - restart
