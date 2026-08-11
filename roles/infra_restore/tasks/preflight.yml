@@ -1,0 +1,61 @@
+---
+# Validate vars and stop compose stacks before restore
+
+- name: Validate restore variables are defined
+  ansible.builtin.assert:
+    that:
+      - backup_target_host is defined
+      - backup_target_host | length > 0
+      - backup_target_dir is defined
+      - backup_target_dir | length > 0
+      - backup_paths is defined
+      - backup_paths | length > 0
+    fail_msg: >-
+      Define backup_target_host, backup_target_dir, and backup_paths in
+      inventory/host_vars/infra/vault.yml (same vars used by backup_to_burkeng).
+
+- name: Build effective restore path list
+  ansible.builtin.set_fact:
+    infra_restore_effective_paths: "{{ restore_paths if (restore_paths | default([]) | length > 0) else backup_paths }}"
+
+- name: Check which restore paths already exist (for pre-restore stop)
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ infra_restore_effective_paths }}"
+  register: infra_restore_path_stats
+  when:
+    - restore_compose_dirs | default([]) | length == 0
+    - restore_stop_stacks | default(true) or restore_start_stacks | default(true)
+
+- name: Discover compose directories under existing restore paths
+  ansible.builtin.find:
+    paths: "{{ infra_restore_path_stats.results | selectattr('stat.isdir', 'defined') | selectattr('stat.isdir') | map(attribute='item') | list }}"
+    patterns:
+      - compose.yaml
+      - docker-compose.yaml
+    recurse: true
+    file_type: file
+  register: infra_restore_compose_files
+  when:
+    - restore_compose_dirs | default([]) | length == 0
+    - restore_stop_stacks | default(true) or restore_start_stacks | default(true)
+    - infra_restore_path_stats is defined
+    - (infra_restore_path_stats.results | selectattr('stat.isdir', 'defined') | selectattr('stat.isdir') | list | length) > 0
+  failed_when: false
+
+- name: Set compose dirs to stop/start
+  ansible.builtin.set_fact:
+    infra_restore_compose_dirs_effective: "{{ restore_compose_dirs if (restore_compose_dirs | default([]) | length > 0) else (infra_restore_compose_files.files | default([]) | map(attribute='path') | map('dirname') | unique | list) }}"
+  when: restore_stop_stacks | default(true) or restore_start_stacks | default(true)
+
+- name: Stop docker compose stacks before restore
+  ansible.builtin.command: docker compose down
+  args:
+    chdir: "{{ item }}"
+  loop: "{{ infra_restore_compose_dirs_effective | default([]) }}"
+  become_user: "{{ local_user }}"
+  when:
+    - restore_stop_stacks | default(true)
+    - not (restore_dry_run | default(false))
+  failed_when: false
+  changed_when: true

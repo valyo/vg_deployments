@@ -186,6 +186,23 @@ sudo /usr/local/bin/backup_from_primary.sh --dry-run  # preview only
 
 **`/usr/local/bin/backup_to_burkeng.sh`** — Pushes local paths (defined in `backup_paths`) to the ZFS server (burkeng). Runs automatically via cron (default: daily at 03:00) when `enable_backup_cron: true`.
 
+To restore that data after a rebuild, use the separate **`infra_restore`** role / `restore_infra.yml` playbook (not part of `setup_servers.yml`):
+
+```bash
+# Dry run
+ansible-playbook -i inventory/hosts restore_infra.yml -e host=infra --ask-vault-pass -e restore_dry_run=true
+
+# Full restore (starts Docker if needed; per-stack compose failures warn only)
+ansible-playbook -i inventory/hosts restore_infra.yml -e host=infra --ask-vault-pass
+
+# Data only (skip compose up)
+ansible-playbook -i inventory/hosts restore_infra.yml -e host=infra --ask-vault-pass -e restore_start_stacks=false
+```
+
+After restore, re-run relevant `deploy_*` playbooks when compose/`.env`/image tags must match vault (e.g. UniFi if the host still has a stale `latest` image).
+
+See `roles/infra_restore/README.md`.
+
 ## ZFS pool management
 
 Pools are handled automatically:

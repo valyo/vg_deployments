@@ -1,0 +1,14 @@
+---
+# Pull backup data from burkeng onto infra
+
+- name: Run restore script
+  ansible.builtin.command: >-
+    /usr/local/bin/restore_from_burkeng.sh
+    {{ '--dry-run' if (restore_dry_run | default(false)) else '' }}
+  become_user: "{{ local_user }}"
+  register: infra_restore_result
+  changed_when: not (restore_dry_run | default(false))
+
+- name: Show restore output
+  ansible.builtin.debug:
+    var: infra_restore_result.stdout_lines

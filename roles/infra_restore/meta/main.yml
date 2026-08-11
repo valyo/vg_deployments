@@ -1,0 +1,18 @@
+---
+# Role metadata for infra_restore
+
+galaxy_info:
+  author: Valentin Georgiev
+  description: Restore infra app data from burkeng backup
+  company: Solberg Honung
+  license: MIT
+  min_ansible_version: "2.1"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "22.04"
+  galaxy_tags:
+    - restore
+    - backup
+
+dependencies: []

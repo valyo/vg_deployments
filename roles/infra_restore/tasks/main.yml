@@ -1,0 +1,29 @@
+---
+# Restore infra app data from burkeng backup
+
+- import_tasks: preflight.yml
+  tags:
+    - restore
+    - preflight
+
+- name: Deploy restore script
+  ansible.builtin.template:
+    src: restore_from_burkeng.sh.j2
+    dest: /usr/local/bin/restore_from_burkeng.sh
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - restore
+    - script
+
+- import_tasks: restore.yml
+  when: restore_run_via_ansible | default(true)
+  tags:
+    - restore
+
+- import_tasks: postflight.yml
+  when: restore_run_via_ansible | default(true)
+  tags:
+    - restore
+    - postflight

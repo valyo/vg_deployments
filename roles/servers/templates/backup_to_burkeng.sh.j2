@@ -7,7 +7,7 @@ set -euo pipefail
 # Configuration
 TARGET_HOST="{{ backup_target_host }}"
 TARGET_USER="{{ local_user }}"
-TARGET_DIR="{{ backup_target_dir | default('/tank/backups/secondary') }}"
+TARGET_DIR="{{ backup_target_dir | default('/burkpool/backups/infra') }}"
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 SSH_KEY="/home/{{ local_user }}/.ssh/id_ed25519_servers"
 SSH_OPTS="-i ${SSH_KEY} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
@@ -24,10 +24,8 @@ RSYNC_OPTS="{{ backup_rsync_opts | default('-avz --delete --progress --numeric-i
 
 echo "$LOG_PREFIX Starting backup to $TARGET_HOST:$TARGET_DIR"
 
-# Check if target host is reachable
 if ! ping -c 1 -W 5 "$TARGET_HOST" > /dev/null 2>&1; then
-    echo "$LOG_PREFIX ERROR: Cannot reach $TARGET_HOST"
-    exit 1
+    echo "$LOG_PREFIX WARNING: Cannot ping $TARGET_HOST; continuing with SSH/rsync anyway"
 fi
 
 # Ensure target directory exists on primary
