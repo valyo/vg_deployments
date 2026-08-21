@@ -1,0 +1,73 @@
+---
+# tasks file for trading_log
+- name: Ensure workdir exists
+  ansible.builtin.file:
+    path: "{{ workdir }}"
+    state: directory
+    mode: "0755"
+  tags:
+    - copy
+
+- name: Ensure Trading Log data directory exists
+  ansible.builtin.file:
+    path: "{{ workdir }}/data"
+    state: directory
+    mode: "0755"
+    owner: "{{ trading_log_env.TRADING_LOG_UID }}"
+    group: "{{ trading_log_env.TRADING_LOG_GID }}"
+  tags:
+    - copy
+
+- name: Copy compose file
+  ansible.builtin.copy:
+    src: compose.yaml
+    dest: "{{ workdir }}/compose.yaml"
+  tags:
+    - copy
+
+- name: Generate .env file from template
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ workdir }}/.env"
+    mode: "0600"
+  tags:
+    - copy
+
+- name: Seed Trading Log database file (optional)
+  ansible.builtin.copy:
+    src: "{{ trading_log_seed_db_file }}"
+    dest: "{{ workdir }}/data/trades.db"
+    mode: "0644"
+    owner: "{{ trading_log_env.TRADING_LOG_UID }}"
+    group: "{{ trading_log_env.TRADING_LOG_GID }}"
+  when: trading_log_seed_db_file | default("") | length > 0
+  tags:
+    - copy
+
+- name: Deploy the stack
+  ansible.builtin.shell: "docker compose up -d"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - up
+
+- name: Tear down the stack
+  ansible.builtin.shell: "docker compose down"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - down
+
+- name: Pull image
+  ansible.builtin.shell: "docker compose pull"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - pull
+
+- name: Recreate the stack
+  ansible.builtin.shell: "docker compose up -d --force-recreate"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - restart
