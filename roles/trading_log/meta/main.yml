@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  author: Valentin Georgiev
+  description: Deploy the Trend Trading Log app via Docker Compose
+  license: BSD
+  min_ansible_version: "2.1"
+  galaxy_tags:
+    - docker
+    - nextjs
+    - trading
+
+dependencies: []

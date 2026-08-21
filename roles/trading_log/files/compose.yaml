@@ -1,0 +1,27 @@
+---
+services:
+  app:
+    container_name: trading_log
+    image: ghcr.io/valyo/trading-log:${IMAGE_VERSION}
+    user: "${TRADING_LOG_UID}:${TRADING_LOG_GID}"
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT}:3000"
+    volumes:
+      # SQLite DB (trades.db) lives here, see docs/ARCHITECTURE.md
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - ALLOWED_GOOGLE_EMAILS=${ALLOWED_GOOGLE_EMAILS}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
