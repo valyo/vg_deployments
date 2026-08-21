@@ -26,8 +26,8 @@
 
 - name: Copy docker compose file
   ansible.builtin.copy:
-    src: docker-compose.yaml
-    dest: "{{ workdir }}/docker-compose.yaml"
+    src: compose.yaml
+    dest: "{{ workdir }}/compose.yaml"
   tags:
     - copy
 
