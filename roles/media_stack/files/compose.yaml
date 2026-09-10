@@ -72,6 +72,8 @@ services:
     profiles: ["jackett", "stack-1"]
     container_name: jackett
     image: linuxserver/jackett:${JACKETT_IMAGE_VERSION}
+    depends_on:
+      - flaresolverr
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -81,6 +83,15 @@ services:
       - jackett-blackhole:/downloads
     ports:
       - 9117:9117
+    restart: unless-stopped
+
+  flaresolverr:
+    profiles: ["jackett", "stack-1"]
+    container_name: flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:${FLARESOLVERR_IMAGE_VERSION}
+    environment:
+      - LOG_LEVEL=${FLARESOLVERR_LOG_LEVEL}
+      - TZ=${TZ}
     restart: unless-stopped
 
   prowlarr:
