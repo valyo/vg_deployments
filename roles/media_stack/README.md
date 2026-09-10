@@ -1,7 +1,7 @@
 Media Stack
 =========
 
-Deploys a Docker Compose media stack (Transmission, Radarr, Sonarr, Jackett, Prowlarr, Jellyfin, optional Gluetun VPN).
+Deploys a Docker Compose media stack (Transmission, Radarr, Sonarr, Jackett, FlareSolverr, Prowlarr, Jellyfin, optional Gluetun VPN).
 
 Requirements
 ------------
@@ -34,6 +34,8 @@ media_stack_env:
   JELLYFIN_DATA: "<jellyfin_data_bind_path>"
   JELLYFIN_IP: "<iot_vlan_static_ip>"
   COMPOSE_PROJECT_NAME: "<compose_project_name>"
+  FLARESOLVERR_IMAGE_VERSION: "{{ media_stack_flaresolverr_image_version }}"
+  FLARESOLVERR_LOG_LEVEL: "{{ media_stack_flaresolverr_log_level }}"
 ```
 
 Only image version defaults are kept in `defaults/main.yml`:
@@ -45,6 +47,8 @@ Only image version defaults are kept in `defaults/main.yml`:
 - `media_stack_jackett_image_version`
 - `media_stack_prowlarr_image_version`
 - `media_stack_jellyfin_image_version`
+- `media_stack_flaresolverr_image_version`
+- `media_stack_flaresolverr_log_level`
 
 `media_stack_env` is rendered to `{{ workdir }}/.env` via `templates/env.j2`.
 Use a fixed `COMPOSE_PROJECT_NAME` to keep Docker named volumes stable across different directories/deploy paths.
@@ -63,6 +67,25 @@ Jellyfin network
 Jellyfin is attached to an external Docker network with static IP:
 
 - `JELLYFIN_IP` (set to your reserved IoT VLAN address)
+
+FlareSolverr / Jackett indexer proxy
+-------------------------------------
+
+`flaresolverr` runs alongside Jackett (profiles `jackett`, `stack-1`) and lets Jackett solve
+Cloudflare-style challenges for indexers that require it, per
+[Jackett's FlareSolverr docs](https://github.com/Jackett/Jackett#configuring-flaresolverr).
+
+It is deliberately **not** published to a host port — FlareSolverr's own docs warn against
+exposing it to the internet, so it's only reachable from other containers on the compose
+project's default network, at `http://flaresolverr:8191`.
+
+After deploying, configure it once in the Jackett UI (this is a Jackett server setting, not
+something this role manages):
+
+1. Open Jackett -> Settings.
+2. Set **FlareSolverr API URL** to `http://flaresolverr:8191`.
+3. Leave **FlareSolverr Max Timeout** at its default unless an indexer needs more time.
+4. Save. Indexers that need it will now route challenge-solving through FlareSolverr automatically.
 
 Tags
 ----
