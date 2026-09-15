@@ -1,0 +1,16 @@
+services:
+  authelia:
+    container_name: authelia
+    image: authelia/authelia:${AUTHELIA_IMAGE_VERSION}
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ${AUTHELIA_CONFIG_PATH}:/config
+    networks:
+      - proxy
+    restart: unless-stopped
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK_NAME}
+    external: true

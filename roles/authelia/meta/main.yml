@@ -1,0 +1,17 @@
+galaxy_info:
+  author: Valentin Georgiev
+  description: Deploy Authelia (forward-auth SSO / 2FA portal) via Docker Compose
+  license: BSD
+  min_ansible_version: "2.1"
+  platforms:
+  - name: Ubuntu
+    versions:
+    - jammy
+
+  galaxy_tags:
+  - authelia
+  - sso
+  - forward-auth
+  - 2fa
+
+dependencies: []

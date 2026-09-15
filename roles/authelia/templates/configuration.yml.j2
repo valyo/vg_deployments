@@ -1,0 +1,74 @@
+---
+###############################################################
+#                   Authelia configuration                    #
+###############################################################
+
+server:
+  address: 'tcp://:9091'
+
+log:
+  level: '{{ authelia_log_level | default("info") }}'
+
+totp:
+  issuer: '{{ authelia_totp_issuer }}'
+
+identity_validation:
+  reset_password:
+    jwt_secret: '{{ authelia_jwt_secret }}'
+
+authentication_backend:
+  file:
+    path: '/config/users_database.yml'
+
+{% if authelia_network_groups is defined and authelia_network_groups | length > 0 %}
+definitions:
+  network:
+{% for net in authelia_network_groups %}
+    {{ net.name }}:
+{% for cidr in net.networks %}
+      - '{{ cidr }}'
+{% endfor %}
+{% endfor %}
+
+{% endif %}
+access_control:
+  default_policy: 'deny'
+  rules:
+{% for rule in authelia_access_control_rules %}
+    - domain: '{{ rule.domain }}'
+      policy: '{{ rule.policy }}'
+{% if rule.subject is defined %}
+      subject: '{{ rule.subject }}'
+{% endif %}
+{% if rule.networks is defined %}
+      networks:
+{% for net_name in rule.networks %}
+        - '{{ net_name }}'
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+session:
+  secret: '{{ authelia_session_secret }}'
+
+  cookies:
+    - name: 'authelia_session'
+      domain: '{{ authelia_root_domain }}'
+      authelia_url: 'https://{{ authelia_portal_hostname }}'
+      expiration: '{{ authelia_session_expiration | default("1 hour") }}'
+      inactivity: '{{ authelia_session_inactivity | default("5 minutes") }}'
+      default_redirection_url: '{{ authelia_default_redirection_url }}'
+
+regulation:
+  max_retries: 3
+  find_time: '2 minutes'
+  ban_time: '5 minutes'
+
+storage:
+  encryption_key: '{{ authelia_storage_encryption_key }}'
+  local:
+    path: '/config/db.sqlite3'
+
+notifier:
+  filesystem:
+    filename: '/config/notification.txt'
