@@ -1,0 +1,89 @@
+---
+# tasks file for authelia
+- name: Ensure workdir exists
+  ansible.builtin.file:
+    path: "{{ workdir }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ authelia_owner }}"
+    group: "{{ authelia_group }}"
+  tags:
+    - copy
+
+- name: Ensure config directory exists
+  ansible.builtin.file:
+    path: "{{ authelia_env.AUTHELIA_CONFIG_PATH }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ authelia_owner }}"
+    group: "{{ authelia_group }}"
+  tags:
+    - copy
+
+- name: Copy docker compose file
+  ansible.builtin.copy:
+    src: compose.yaml
+    dest: "{{ workdir }}/compose.yaml"
+    mode: "0644"
+    owner: "{{ authelia_owner }}"
+    group: "{{ authelia_group }}"
+  tags:
+    - copy
+
+- name: Generate .env file from template
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ workdir }}/.env"
+    mode: "0600"
+    owner: "{{ authelia_owner }}"
+    group: "{{ authelia_group }}"
+  tags:
+    - copy
+
+- name: Generate Authelia configuration.yml from template
+  ansible.builtin.template:
+    src: configuration.yml.j2
+    dest: "{{ authelia_env.AUTHELIA_CONFIG_PATH }}/configuration.yml"
+    mode: "0600"
+    owner: "{{ authelia_owner }}"
+    group: "{{ authelia_group }}"
+  tags:
+    - copy
+
+- name: Generate Authelia users_database.yml from template
+  ansible.builtin.template:
+    src: users_database.yml.j2
+    dest: "{{ authelia_env.AUTHELIA_CONFIG_PATH }}/users_database.yml"
+    mode: "0600"
+    owner: "{{ authelia_owner }}"
+    group: "{{ authelia_group }}"
+  tags:
+    - copy
+
+- name: Deploy the stack
+  ansible.builtin.shell: "docker compose up -d"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - up
+
+- name: Tear down the stack
+  ansible.builtin.shell: "docker compose down"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - down
+
+- name: Pull image
+  ansible.builtin.shell: "docker compose pull"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - pull
+
+- name: Recreate the stack
+  ansible.builtin.shell: "docker compose up -d --force-recreate"
+  args:
+    chdir: "{{ workdir }}"
+  tags:
+    - restart
