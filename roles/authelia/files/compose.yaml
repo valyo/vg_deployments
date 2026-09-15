@@ -4,6 +4,8 @@ services:
     image: authelia/authelia:${AUTHELIA_IMAGE_VERSION}
     environment:
       - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
     volumes:
       - ${AUTHELIA_CONFIG_PATH}:/config
     networks:

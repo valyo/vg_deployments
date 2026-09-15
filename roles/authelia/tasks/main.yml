@@ -65,6 +65,7 @@
   args:
     chdir: "{{ workdir }}"
   tags:
+    - never
     - up
 
 - name: Tear down the stack
@@ -72,6 +73,7 @@
   args:
     chdir: "{{ workdir }}"
   tags:
+    - never
     - down
 
 - name: Pull image

@@ -33,6 +33,10 @@ authelia_env:
   TZ: "<timezone>"
   AUTHELIA_CONFIG_PATH: "<host_path_to_config>"
   PROXY_NETWORK_NAME: "<must_match_nginx_proxy_manager_role's_npm_env.PROXY_NETWORK_NAME>"
+  # Reuse authelia_owner/authelia_group so the container's process matches the
+  # ownership Ansible sets on the bind-mounted config directory:
+  PUID: "{{ authelia_owner }}"
+  PGID: "{{ authelia_group }}"
 
 authelia_jwt_secret: "<random, see below>"
 authelia_session_secret: "<random, see below>"
@@ -156,11 +160,15 @@ Full reference: <https://www.authelia.com/integration/proxies/nginx-proxy-manage
 Tags
 ----
 
-- `copy` - write compose/env/config files and ensure directories exist
-- `up` - `docker compose up -d`
-- `down` - `docker compose down`
-- `pull` - `docker compose pull`
-- `restart` - `docker compose up -d --force-recreate`
+Running with no `--tags` at all applies `copy`, `pull`, and `restart` — the usual "apply config/image
+changes" flow. `up` and `down` are opt-in only (tagged `never`), since they're for the initial
+deploy or an explicit teardown, not routine changes:
+
+- `copy` - write compose/env/config files and ensure directories exist (runs by default)
+- `pull` - `docker compose pull` (runs by default)
+- `restart` - `docker compose up -d --force-recreate` (runs by default)
+- `up` - `docker compose up -d` (opt-in, e.g. first deploy: `--tags up`)
+- `down` - `docker compose down` (opt-in: `--tags down`)
 
 Example Playbook
 ----------------
