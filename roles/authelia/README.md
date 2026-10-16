@@ -5,7 +5,8 @@ Deploys [Authelia](https://www.authelia.com/) via Docker Compose — a forward-a
 that sits in front of Nginx Proxy Manager (NPM) proxy hosts, gating access to services that have
 weak or no native authentication (e.g. Jackett, Radarr, Sonarr, Transmission).
 
-Authentication is local (file-based users, optionally with TOTP/WebAuthn 2FA) — Authelia does not
+Authentication is local (file-based users, second factor via WebAuthn security keys/passkeys — TOTP
+is disabled in `configuration.yml.j2`) — Authelia does not
 support delegating login to GitHub/Google; it can only act as an OIDC *provider* for other apps
 that support "login via OIDC" natively (a separate, optional feature not covered by this role).
 
@@ -42,7 +43,6 @@ authelia_jwt_secret: "<random, see below>"
 authelia_session_secret: "<random, see below>"
 authelia_storage_encryption_key: "<random, see below>"
 
-authelia_totp_issuer: "<your_domain>"
 authelia_root_domain: "<your_domain>"
 authelia_portal_hostname: "auth.<your_domain>"
 authelia_default_redirection_url: "https://<landing_page>"

@@ -10,7 +10,11 @@ log:
   level: '{{ authelia_log_level | default("info") }}'
 
 totp:
-  issuer: '{{ authelia_totp_issuer }}'
+  disable: true
+
+webauthn:
+  disable: false
+  display_name: '{{ authelia_root_domain }}'
 
 identity_validation:
   reset_password:
