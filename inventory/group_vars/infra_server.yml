@@ -37,3 +37,4 @@ infra_restore_compose_dirs: []
 #   - /storage/apps/trading_log
 #   - /storage/apps/sh_webshop
 #   - /storage/apps/sh_portal
+#   - /storage/apps/sheep_journal
