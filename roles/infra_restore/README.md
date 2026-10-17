@@ -5,16 +5,23 @@ Restores infra server app data from the burkeng (ZFS) backup produced by
 
 ## How it maps to backup
 
-Backup pushes each path in `backup_paths` into `backup_target_dir/` on burkeng
-(directory name preserved):
+Backup pushes every subdirectory of `backup_root` (default `/storage/apps`,
+minus `backup_exclude`) plus any extra `backup_paths` into
+`backup_target_dir/` on burkeng (directory name preserved):
 
-| Local (`backup_paths`) | On burkeng |
+| Local | On burkeng |
 |---|---|
 | `/storage/apps/homeassistant` | `…/backups/infra/homeassistant/` |
 | `/storage/apps/npm` | `…/backups/infra/npm/` |
 
-Restore rsyncs each remote dir **into** the matching local path
-(`…/homeassistant/` → `/storage/apps/homeassistant/`), not into the parent.
+Restore lists the app dirs in `backup_target_dir` on burkeng and rsyncs each
+one **into** the matching local path (`…/homeassistant/` →
+`/storage/apps/homeassistant/`), not into the parent. A remote dir whose name
+matches an entry in `backup_paths` goes back to that path; everything else
+goes to `backup_root/<name>`. Names in `backup_exclude` are skipped.
+
+Note: backup never deletes app dirs on burkeng, so an app you removed from
+infra will be restored too unless you delete it on burkeng or exclude it.
 
 ## Cleaning up a bad restore
 
@@ -36,7 +43,8 @@ Then re-run the restore playbook.
 - Vault vars in `inventory/host_vars/infra/vault.yml`:
   - `backup_target_host`
   - `backup_target_dir`
-  - `backup_paths`
+  - `backup_paths` (optional extras)
+- `backup_root` / `backup_exclude` in `inventory/group_vars/infra_server.yml`
 - Reachable burkeng with the same SSH key used for backups
   (`~/.ssh/id_ed25519_servers`)
 
@@ -50,8 +58,8 @@ Then re-run the restore playbook.
 | `restore_stop_stacks` | `true` | `docker compose down` before restore |
 | `restore_start_stacks` | `true` | `docker compose up -d` after restore (starts Docker if needed; per-stack failures warn but do not fail the play). Use `false` for data-only restore. |
 | `restore_run_via_ansible` | `true` | Run restore via playbook (false = install script only) |
-| `restore_paths` | `[]` | Subset of `backup_paths` (empty = all) |
-| `restore_compose_dirs` / `infra_restore_compose_dirs` | `[]` | Compose dirs to stop/start (empty = auto-discover) |
+| `restore_paths` | `[]` | Explicit local paths to restore (empty = every app dir on burkeng) |
+| `restore_compose_dirs` / `infra_restore_compose_dirs` | `[]` | Compose dirs to stop/start (empty = auto-discover under `backup_root`, skipping `backup_exclude`) |
 
 Ownership is preserved by rsync `--numeric-ids` (same UIDs as on burkeng). No post-restore chown.
 

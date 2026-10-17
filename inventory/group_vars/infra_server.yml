@@ -3,9 +3,18 @@
 
 server_role: infra
 
-# Sensitive backup path variables are stored in host_vars/infra/vault.yml:
+# Sensitive backup variables are stored in host_vars/infra/vault.yml:
+# - backup_target_host
 # - backup_target_dir
-# - backup_paths
+# - backup_paths (optional: extra paths outside backup_root)
+
+# Every subdirectory of backup_root is backed up automatically (discovered
+# when the backup script runs), so new apps need no config change.
+# Set backup_root to "" to disable discovery and use backup_paths only.
+backup_root: /storage/apps
+
+# Directory names under backup_root to skip (backup and restore)
+backup_exclude: []
 
 # Backup schedule (cron format)
 backup_cron_minute: "0"
@@ -17,7 +26,7 @@ enable_backup_cron: true
 backup_rsync_opts: "-avz --delete --progress --numeric-ids"
 
 # Optional explicit compose dirs for infra_restore stop/start.
-# Empty list = auto-discover compose.yaml under restore paths.
+# Empty list = auto-discover compose.yaml under backup_root.
 infra_restore_compose_dirs: []
 # Example:
 # infra_restore_compose_dirs:

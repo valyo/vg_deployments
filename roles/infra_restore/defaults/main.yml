@@ -9,8 +9,18 @@ restore_stop_stacks: true
 restore_start_stacks: true
 restore_run_via_ansible: true
 
-# Empty = restore all paths from backup_paths
+# Empty = restore every app dir found in backup_target_dir on burkeng
+# (mapped back to backup_root/<name>, or to the matching backup_paths entry)
 restore_paths: []
 
-# Empty = auto-discover compose.yaml / docker-compose.yaml under restore paths
+# Compose dirs under excluded apps (backup_exclude) are never stopped/started.
+# Never-matching pattern when nothing is excluded.
+infra_restore_exclude_regex: >-
+  {{ ('^' ~ (backup_root | default('/storage/apps') | regex_replace('/+$', '') | regex_escape) ~ '/('
+      ~ (backup_exclude | default([]) | map('regex_escape') | join('|')) ~ ')(/|$)')
+     if (backup_exclude | default([]) | length > 0 and backup_root | default('/storage/apps') | length > 0)
+     else '(?!)' }}
+
+# Empty = auto-discover compose.yaml / docker-compose.yaml under backup_root
+# (or restore_paths when set)
 restore_compose_dirs: "{{ infra_restore_compose_dirs | default([]) }}"

@@ -18,7 +18,7 @@
 
 - name: Refresh compose dirs for start
   ansible.builtin.set_fact:
-    infra_restore_compose_dirs_effective: "{{ restore_compose_dirs if (restore_compose_dirs | default([]) | length > 0) else (infra_restore_compose_files_after.files | default([]) | map(attribute='path') | map('dirname') | unique | list) }}"
+    infra_restore_compose_dirs_effective: "{{ restore_compose_dirs if (restore_compose_dirs | default([]) | length > 0) else (infra_restore_compose_files_after.files | default([]) | map(attribute='path') | map('dirname') | unique | reject('match', infra_restore_exclude_regex) | list) }}"
   when:
     - restore_start_stacks | default(true)
     - not (restore_dry_run | default(false))
