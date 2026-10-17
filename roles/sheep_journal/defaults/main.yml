@@ -1,0 +1,4 @@
+---
+# defaults file for sheep_journal
+# CI publishes ghcr.io/valyo/sheep-journal tagged with the app's VERSION file (no "v") and latest.
+sheep_journal_image_version: "0.1.0"
