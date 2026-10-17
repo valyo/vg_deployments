@@ -66,11 +66,11 @@
     that:
       - backup_target_dir is defined
       - backup_target_dir | length > 0
-      - backup_paths is defined
-      - backup_paths | length > 0
+      - (backup_root | default('/storage/apps') | length > 0) or (backup_paths | default([]) | length > 0)
     fail_msg: >-
-      Define backup_target_dir and backup_paths in encrypted host vars
-      (inventory/host_vars/infra/vault.yml) before running backup tasks.
+      Define backup_target_dir in encrypted host vars
+      (inventory/host_vars/infra/vault.yml), and set backup_root and/or
+      backup_paths so there is something to back up.
   tags:
     - backup
 

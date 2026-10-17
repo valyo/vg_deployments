@@ -29,17 +29,69 @@ DELETE_FLAG="--delete"
 
 RSYNC_OPTS="{{ restore_rsync_opts | default('-avz --numeric-ids --progress') }} ${DELETE_FLAG}"
 
-{% set _restore_paths = restore_paths if (restore_paths | default([]) | length > 0) else (backup_paths | default([])) %}
+# Explicit subset to restore (restore_paths). Empty = restore every app dir
+# found under SOURCE_DIR on the backup host.
 RESTORE_PATHS=(
-{% for path in _restore_paths %}
+{% for path in restore_paths | default([]) %}
     "{{ path }}"
 {% endfor %}
 )
+
+# Same discovery settings as backup_to_burkeng.sh
+BACKUP_ROOT="{{ backup_root | default('/storage/apps') | regex_replace('/+$', '') }}"
+BACKUP_EXCLUDE=(
+{% for name in backup_exclude | default([]) %}
+    "{{ name }}"
+{% endfor %}
+)
+
+# Explicit backup_paths: remote dir name -> original local path (for paths
+# that do not live under BACKUP_ROOT)
+declare -A EXTRA_BY_NAME=()
+{% for path in backup_paths | default([]) %}
+EXTRA_BY_NAME["$(basename "{{ path | regex_replace('/+$', '') }}")"]="{{ path | regex_replace('/+$', '') }}"
+{% endfor %}
+
+is_excluded() {
+    local name="$1" ex
+    for ex in "${BACKUP_EXCLUDE[@]}"; do
+        [ "$name" == "$ex" ] && return 0
+    done
+    return 1
+}
 
 echo "$LOG_PREFIX Starting restore from ${SOURCE_USER}@${SOURCE_HOST}:${SOURCE_DIR}"
 
 if ! ping -c 1 -W 5 "$SOURCE_HOST" > /dev/null 2>&1; then
     echo "$LOG_PREFIX WARNING: Cannot ping $SOURCE_HOST; continuing with SSH/rsync anyway"
+fi
+
+if [ {% raw %}${#RESTORE_PATHS[@]}{% endraw %} -eq 0 ]; then
+    if ! remote_names="$(ssh ${SSH_OPTS} "${SOURCE_USER}@${SOURCE_HOST}" \
+        "find '${SOURCE_DIR}' -mindepth 1 -maxdepth 1 -type d -printf '%f\n'")"; then
+        echo "$LOG_PREFIX ERROR: Could not list ${SOURCE_HOST}:${SOURCE_DIR}"
+        exit 1
+    fi
+
+    while IFS= read -r name; do
+        [ -z "$name" ] && continue
+        if is_excluded "$name"; then
+            echo "$LOG_PREFIX Skipping excluded: $name"
+            continue
+        fi
+        if [ -n "${EXTRA_BY_NAME[$name]:-}" ]; then
+            RESTORE_PATHS+=("${EXTRA_BY_NAME[$name]}")
+        elif [ -n "$BACKUP_ROOT" ]; then
+            RESTORE_PATHS+=("${BACKUP_ROOT%/}/${name}")
+        else
+            echo "$LOG_PREFIX WARNING: No local destination for remote dir: $name"
+        fi
+    done < <(printf '%s\n' "$remote_names" | sort)
+fi
+
+if [ {% raw %}${#RESTORE_PATHS[@]}{% endraw %} -eq 0 ]; then
+    echo "$LOG_PREFIX Nothing to restore"
+    exit 0
 fi
 
 for dest_path in "${RESTORE_PATHS[@]}"; do

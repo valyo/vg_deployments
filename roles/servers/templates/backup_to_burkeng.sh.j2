@@ -12,12 +12,57 @@ LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 SSH_KEY="/home/{{ local_user }}/.ssh/id_ed25519_servers"
 SSH_OPTS="-i ${SSH_KEY} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
 
-# Local paths to backup
-BACKUP_PATHS=(
+# Every subdirectory of BACKUP_ROOT is backed up (discovered at run time),
+# except names listed in BACKUP_EXCLUDE. Empty BACKUP_ROOT disables discovery.
+BACKUP_ROOT="{{ backup_root | default('/storage/apps') | regex_replace('/+$', '') }}"
+BACKUP_EXCLUDE=(
+{% for name in backup_exclude | default([]) %}
+    "{{ name }}"
+{% endfor %}
+)
+
+# Extra local paths to backup (outside BACKUP_ROOT, or explicit entries)
+EXTRA_PATHS=(
 {% for path in backup_paths | default([]) %}
     "{{ path }}"
 {% endfor %}
 )
+
+# Build the final path list: discovered dirs + extra paths, deduplicated
+declare -A SEEN=()
+BACKUP_PATHS=()
+
+add_path() {
+    local p="${1%/}"
+    [ -z "$p" ] && return 0
+    [ -n "${SEEN[$p]:-}" ] && return 0
+    SEEN[$p]=1
+    BACKUP_PATHS+=("$p")
+}
+
+is_excluded() {
+    local name="$1" ex
+    for ex in "${BACKUP_EXCLUDE[@]}"; do
+        [ "$name" == "$ex" ] && return 0
+    done
+    return 1
+}
+
+if [ -n "$BACKUP_ROOT" ] && [ -d "$BACKUP_ROOT" ]; then
+    shopt -s nullglob
+    for dir in "$BACKUP_ROOT"/*/; do
+        dir="${dir%/}"
+        if is_excluded "$(basename "$dir")"; then
+            continue
+        fi
+        add_path "$dir"
+    done
+    shopt -u nullglob
+fi
+
+for path in "${EXTRA_PATHS[@]}"; do
+    add_path "$path"
+done
 
 # Rsync options
 RSYNC_OPTS="{{ backup_rsync_opts | default('-avz --delete --progress --numeric-ids') }}"

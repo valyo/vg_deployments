@@ -77,7 +77,7 @@ Stored in `inventory/host_vars/<hostname>/vault.yml`:
 - `backup_source_host` — ZFS server IP (backup_server only)
 - `backup_target_host` — ZFS server IP (infra_server only)
 - `backup_target_dir` — remote backup destination path (infra_server only)
-- `backup_paths` — local paths to back up (infra_server only)
+- `backup_paths` — optional extra local paths to back up, on top of everything under `backup_root` (infra_server only)
 - `external_drive_uuid` — UUID of external backup drive (backup_server only)
 
 Stored in `roles/servers/vars/main.yml` (vault-encrypted):
@@ -102,7 +102,9 @@ SSH keys in `roles/servers/files/` are also vault-encrypted.
 | Variable | Description |
 |---|---|
 | `backup_target_dir` | Remote path on ZFS server to push backups to |
-| `backup_paths` | List of local paths to back up |
+| `backup_root` | Directory whose subdirectories are all backed up, discovered at run time (default `/storage/apps`; `""` disables) |
+| `backup_exclude` | Directory names under `backup_root` to skip |
+| `backup_paths` | Optional extra local paths to back up (vault) |
 | `backup_cron_minute` | Cron schedule minute |
 | `backup_cron_hour` | Cron schedule hour |
 | `enable_backup_cron` | Enable/disable the backup cron job |
@@ -184,7 +186,7 @@ sudo /usr/local/bin/backup_from_primary.sh --dry-run  # preview only
 
 ### Infra server
 
-**`/usr/local/bin/backup_to_burkeng.sh`** — Pushes local paths (defined in `backup_paths`) to the ZFS server (burkeng). Runs automatically via cron (default: daily at 03:00) when `enable_backup_cron: true`.
+**`/usr/local/bin/backup_to_burkeng.sh`** — Pushes every subdirectory of `backup_root` (default `/storage/apps`, minus `backup_exclude`) plus any extra `backup_paths` to the ZFS server (burkeng). Apps are discovered each time the script runs, so a newly deployed app is backed up on the next run without re-running Ansible. Runs automatically via cron (default: daily at 03:00) when `enable_backup_cron: true`.
 
 To restore that data after a rebuild, use the separate **`infra_restore`** role / `restore_infra.yml` playbook (not part of `setup_servers.yml`):
 
